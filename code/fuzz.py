@@ -17,17 +17,19 @@ DefaultItems = ['trace_cmd', 'crash_cmd', 'poc', 'poc_fmt', 'folder', 'mutate_ra
 OutFolder = ''
 TmpFolder = ''
 TraceFolder = ''
+InputFolder = '' # (YN: added folder for generated inputs)
 
 SeedPool = [] # Each element is in the fmt of [<process_tag>, <seed_content>]. <process_tag>: True (selected) / False (not selected)
 SeedTraceHashList = []
 ReportCollection = [] # Each element if in the fmt of [<trace_hash>, <tag>]. <tag>: m - malicious / b - benign
 TraceHashCollection = []
-GlobalTimeout = 4 * 60 * 60 # 2 hours
-LocalTimeout = 4 * 60 * 60 # 2 hours
+GlobalTimeout = 5 * 60 # 5 min
+LocalTimeout = 5 * 60 # 5 min
 DefaultRandSeed = 3
 DefaultMutateNum = 200
 DefaultMaxCombination = 2
 MaxCombineNum = 10**20
+inputCounter = 0 # (YN: added input counter)
 
 def parse_args():
 	parser = argparse.ArgumentParser(description="ConcFuzz")
@@ -152,12 +154,15 @@ def parse_args():
 	return args.tag, detailed_config, args.verbose
 
 def init_log(tag, verbose, folder):
-	global OutFolder, TmpFolder, TraceFolder
+	global OutFolder, TmpFolder, TraceFolder, InputFolder
 	OutFolder = os.path.join(folder, 'output_%d' % int(time()))
 	if os.path.exists(OutFolder):
 		raise Exception("ERROR: Output folder already exists! -> %s" % OutFolder)
 	else:
 		os.mkdir(OutFolder)
+	InputFolder = os.path.join(OutFolder, 'inputs') # (YN: added folder for generated inputs)
+	if not os.path.exists(InputFolder):
+		os.mkdir(InputFolder)
 	TmpFolder = os.path.join(OutFolder, 'tmp')
 	if not os.path.exists(TmpFolder):
 		os.mkdir(TmpFolder)
@@ -383,7 +388,7 @@ def mutate_inputs(seed, poc_fmt, mutation_num, mutate_idx):
 	return inputs
 
 def concentrate_fuzz(config_info):
-	global TraceHashCollection, ReportCollection, SeedPool, SeedTraceHashList, TraceFolder, TmpFolder
+	global TraceHashCollection, ReportCollection, SeedPool, SeedTraceHashList, TraceFolder, TmpFolder, inputCounter
 	# init the randomization function
 	np.random.seed(config_info['rand_seed'])
 	logging.info("Initialized the random seed -> %d" % config_info['rand_seed'])
@@ -477,6 +482,11 @@ def concentrate_fuzz(config_info):
 					trace_path = os.path.join(TraceFolder, item[2])
 					# utils.write_pkl(trace_path, item[1])
 					np.savez(trace_path, trace=item[1])
+					# (YN: added to print "interesting" input files)
+					input_filepath = os.path.join(InputFolder, "input_" + str(inputCounter))
+					logging.debug("write input: " + str(input_filepath))
+					utils.write_bin(input_filepath, inputs[item[0]])
+					inputCounter += 1
 				# check whether to add it into the seed pool
 				if item[3] == 'm' and item[2] not in SeedTraceHashList:
 					SeedPool.append([False, inputs[item[0]]])
@@ -503,14 +513,15 @@ def concentrate_fuzz(config_info):
 			# if len(loc_tag) >= len(selected_seed_trace):
 			# 	logging.debug("[R-%d-%d] Finish exploring all the locs!" % (round_no, subround_no))
 			# 	break
+		# (YN: skipped processing and saving of sensitivity map to save time)
 		# processing the local sensitivity (for saving the hard disk)
-		loc_sens = []
-		loc_idxes = []
-		loc_num = len(loc_sensitivity_map['value'])
-		for loc_id in range(loc_num):
-			if len(loc_sensitivity_map['value'][loc_id]) > 0:
-				loc_idxes.append(loc_id)
-				loc_sens.append(loc_sensitivity_map['value'][loc_id])
+		#loc_sens = []
+		#loc_idxes = []
+		#loc_num = len(loc_sensitivity_map['value'])
+		#for loc_id in range(loc_num):
+		#	if len(loc_sensitivity_map['value'][loc_id]) > 0:
+		#		loc_idxes.append(loc_id)
+		#		loc_sens.append(loc_sensitivity_map['value'][loc_id])
 		# loc_sens = []
 		# loc_idxes = []
 		# loc_num = len(loc_sensitivity_map['value'])
@@ -519,18 +530,19 @@ def concentrate_fuzz(config_info):
 		# 	if len(tmp) > 0:
 		# 		loc_idxes.append(loc_id)
 		# 		loc_sens.append(tmp)
+		#
 		# save the sensitivity map
-		sensitivity_filepath = os.path.join(OutFolder, 'sensitivity_%s.pkl' % selected_seed_trace_hash)
-		logging.debug("Start saving the sensitivity map -> %s" % sensitivity_filepath)
-		info = {
-			'idx': loc_sensitivity_map['idx'],
-			'loc_idx': loc_idxes,
-			'loc_sens': loc_sens,
-			'crash_sens': list(crash_sensitivity_map['value']),
-			'loc_tag': list(loc_sensitivity_map['tag'])
-		}
-		utils.write_pkl(sensitivity_filepath, info)
-		logging.debug("Finish writing the sensitivity map -> %s" % sensitivity_filepath)
+		#sensitivity_filepath = os.path.join(OutFolder, 'sensitivity_%s.pkl' % selected_seed_trace_hash)
+		#logging.debug("Start saving the sensitivity map -> %s" % sensitivity_filepath)
+		#info = {
+		#	'idx': loc_sensitivity_map['idx'],
+		#	'loc_idx': loc_idxes,
+		#	'loc_sens': loc_sens,
+		#	'crash_sens': list(crash_sensitivity_map['value']),
+		#	'loc_tag': list(loc_sensitivity_map['tag'])
+		#}
+		#utils.write_pkl(sensitivity_filepath, info)
+		#logging.debug("Finish writing the sensitivity map -> %s" % sensitivity_filepath)
 		# check whether it timeouts
 		ctime = time()
 		duration = ctime - stime
@@ -538,18 +550,21 @@ def concentrate_fuzz(config_info):
 			logging.debug("[R-%d] Timeout! -> Duration: %f (%f - %f) in seconds" % (round_no, duration, ctime, stime))
 			break
 
+	# (YN: skipped to save time due not needed)
 	# save all the remaining info
-	report_filepath = os.path.join(OutFolder, 'reports.pkl')
-	utils.write_pkl(report_filepath, ReportCollection)
-	logging.debug("Finish writing all the reports!")
+	#report_filepath = os.path.join(OutFolder, 'reports.pkl')
+	#utils.write_pkl(report_filepath, ReportCollection)
+	#logging.debug("Finish writing all the reports!")
 
-	seed_filepath = os.path.join(OutFolder, 'seeds.pkl')
-	utils.write_pkl(seed_filepath, SeedPool)
-	logging.debug("Finish writing all the seeds!")
+	# (YN: skipped to save time due not needed)
+	#seed_filepath = os.path.join(OutFolder, 'seeds.pkl')
+	#utils.write_pkl(seed_filepath, SeedPool)
+	#logging.debug("Finish writing all the seeds!")
 
-	seed_hash_filepath = os.path.join(OutFolder, 'seed_hashes.pkl')
-	utils.write_pkl(seed_hash_filepath, SeedTraceHashList)
-	logging.debug("Finish writing all the hash of seeds!")
+	# (YN: skipped to save time due not needed)
+	#seed_hash_filepath = os.path.join(OutFolder, 'seed_hashes.pkl')
+	#utils.write_pkl(seed_hash_filepath, SeedTraceHashList)
+	#logging.debug("Finish writing all the hash of seeds!")
 	logging.debug('Done!')
 
 if __name__ == '__main__':
