@@ -55,31 +55,32 @@ RUN cmake CMakeLists.txt
 RUN make
 WORKDIR /opt/fuzzer
 
-# set up CVE-2016-5314
-RUN mkdir cves
-WORKDIR /opt/fuzzer/cves
-RUN mkdir cve_2016_5314
-WORKDIR /opt/fuzzer/cves/cve_2016_5314
-RUN apt install -y build-essential git vim unzip python-dev python-pip ipython zlib1g-dev
-COPY ./data/libtiff/cve_2016_5314/source.zip ./source.zip
-RUN unzip source.zip
-RUN rm source.zip
-WORKDIR /opt/fuzzer/cves/cve_2016_5314/source
-RUN ./configure
-RUN make CFLAGS="-static -ggdb" CXXFLAGS="-static -ggdb"
-# copy exploit
-WORKDIR /opt/fuzzer/cves/cve_2016_5314
-COPY ./data/libtiff/cve_2016_5314/exploit ./exploit
-# setup an exploit detector for cve-2016-5314 --- valgrind
-WORKDIR /opt/fuzzer/deps
-RUN apt install -y libc6-dbg
-RUN wget https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2
-RUN tar xjf valgrind-3.15.0.tar.bz2
-RUN mv valgrind-3.15.0 valgrind
-WORKDIR /opt/fuzzer/deps/valgrind
-RUN ./configure
-RUN make
-RUN make install
+# (YN: skipped setup of test cve)
+## set up CVE-2016-5314
+#RUN mkdir cves
+#WORKDIR /opt/fuzzer/cves
+#RUN mkdir cve_2016_5314
+#WORKDIR /opt/fuzzer/cves/cve_2016_5314
+#RUN apt install -y build-essential git vim unzip python-dev python-pip ipython zlib1g-dev
+#COPY ./data/libtiff/cve_2016_5314/source.zip ./source.zip
+#RUN unzip source.zip
+#RUN rm source.zip
+#WORKDIR /opt/fuzzer/cves/cve_2016_5314/source
+#RUN ./configure
+#RUN make CFLAGS="-static -ggdb" CXXFLAGS="-static -ggdb"
+## copy exploit
+#WORKDIR /opt/fuzzer/cves/cve_2016_5314
+#COPY ./data/libtiff/cve_2016_5314/exploit ./exploit
+## setup an exploit detector for cve-2016-5314 --- valgrind
+#WORKDIR /opt/fuzzer/deps
+#RUN apt install -y libc6-dbg
+#RUN wget https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2
+#RUN tar xjf valgrind-3.15.0.tar.bz2
+#RUN mv valgrind-3.15.0 valgrind
+#WORKDIR /opt/fuzzer/deps/valgrind
+#RUN ./configure
+#RUN make
+#RUN make install
 
 # prepare code
 WORKDIR /opt/fuzzer
