@@ -11,17 +11,20 @@ WORKDIR /opt/fuzzer
 RUN mkdir deps
 WORKDIR /opt/fuzzer/deps
 
+RUN mkdir -p /opt/fuzzer/pypackages/lib/python2.7/site-packages
+ENV PYTHONPATH="/opt/fuzzer/pypackages/lib/python2.7/site-packages:/opt/fuzzer/pypackages:${PYTHONPATH}"
+
 # Installing numpy
 RUN wget https://github.com/numpy/numpy/releases/download/v1.16.6/numpy-1.16.6.zip
 RUN unzip numpy-1.16.6.zip
 RUN rm numpy-1.16.6.zip
 RUN mv numpy-1.16.6 numpy
 WORKDIR /opt/fuzzer/deps/numpy
-RUN python setup.py install
+RUN python setup.py install --prefix=/opt/fuzzer/pypackages
 WORKDIR /opt/fuzzer/deps
 
 # install pyelftools
-RUN pip install pyelftools
+RUN pip install --target=/opt/fuzzer/pypackages pyelftools
 
 # install CMake
 RUN wget https://github.com/Kitware/CMake/releases/download/v3.16.2/cmake-3.16.2.tar.gz
@@ -71,21 +74,23 @@ WORKDIR /opt/fuzzer
 ## copy exploit
 #WORKDIR /opt/fuzzer/cves/cve_2016_5314
 #COPY ./data/libtiff/cve_2016_5314/exploit ./exploit
-## setup an exploit detector for cve-2016-5314 --- valgrind
-#WORKDIR /opt/fuzzer/deps
-#RUN apt install -y libc6-dbg
-#RUN wget https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2
-#RUN tar xjf valgrind-3.15.0.tar.bz2
-#RUN mv valgrind-3.15.0 valgrind
-#WORKDIR /opt/fuzzer/deps/valgrind
-#RUN ./configure
-#RUN make
-#RUN make install
+
+# setup an exploit detector for cve-2016-5314 --- valgrind
+WORKDIR /opt/fuzzer/deps
+RUN apt install -y libc6-dbg
+RUN wget https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2
+RUN tar xjf valgrind-3.15.0.tar.bz2
+RUN mv valgrind-3.15.0 valgrind
+WORKDIR /opt/fuzzer/deps/valgrind
+RUN ./configure
+RUN make
+RUN make install
 
 # prepare code
 WORKDIR /opt/fuzzer
 RUN mkdir code
 WORKDIR /opt/fuzzer/code
+COPY ./code/fuzz ./
 COPY ./code/fuzz.py ./
 COPY ./code/parse_dwarf.py ./
 COPY ./code/patchloc.py ./
