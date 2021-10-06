@@ -17,7 +17,8 @@ DefaultItems = ['trace_cmd', 'crash_cmd', 'poc', 'poc_fmt', 'folder', 'mutate_ra
 OutFolder = ''
 TmpFolder = ''
 TraceFolder = ''
-InputFolder = '' # (YN: added folder for generated inputs)
+ConcentratedInputFolder = '' # (YN: added folder for concentrated generated inputs)
+AllInputFolder = '' # (YN: added folder for all generated inputs)
 
 SeedPool = [] # Each element is in the fmt of [<process_tag>, <seed_content>]. <process_tag>: True (selected) / False (not selected)
 SeedTraceHashList = []
@@ -29,7 +30,10 @@ DefaultRandSeed = 3
 DefaultMutateNum = 200
 DefaultMaxCombination = 2
 MaxCombineNum = 10**20
-inputCounter = 0 # (YN: added input counter)
+ConcentratedInputCounter = 0 # (YN: added input counter)
+inputFormat = 'bfile' # or 'text' (YN: added to determine input format)
+AllInputCounter = 0 # (YN: added input counter)
+generateAllInputs = False # (YN: added flag for generating all inputs)
 
 def parse_args():
 	parser = argparse.ArgumentParser(description="ConcFuzz")
@@ -62,6 +66,13 @@ def parse_args():
 	arg_num = len(detailed_config['poc'])
 	if arg_num != len(detailed_config['poc_fmt']) and arg_num != len(detailed_config['mutate_range']):
 		raise Exception("ERROR: Your defined poc is not matched with poc_fmt/mutate_range")
+
+	# (YN: determine how to write inputs)
+	if arg_num == 1 and detailed_config['poc_fmt'][0] == 'bfile':
+		detailed_config['input_format'] = 'bfile'
+	else:
+		detailed_config['input_format'] = 'text'
+
 	processed_arg = []
 	processed_fmt = [] # each element is in the fmt of [<type>, <start_idx>, <size>, <mutate_range>]
 	for arg_no in range(arg_num):
@@ -129,6 +140,11 @@ def parse_args():
 		MaxCombineNum = int(detailed_config['max_combine_num'][0])
 	if 'tmp_filename_len' in detailed_config: # read the length of temperol filename
 		utils.FileNameLen = int(detailed_config['tmp_filename_len'][0])
+	# (YN: added optional storage of all generated inputs files)
+	if 'store_all_inputs' not in detailed_config: # read the randomization seed
+		detailed_config['store_all_inputs'] = False
+	else:
+		detailed_config['store_all_inputs'] = detailed_config['store_all_inputs'][0] == 'True'
 	# get all the replace idx in the cmd
 	tmp = ';'.join(detailed_config['trace_cmd']).split('***')
 	detailed_config['trace_cmd'] = []
@@ -154,15 +170,20 @@ def parse_args():
 	return args.tag, detailed_config, args.verbose
 
 def init_log(tag, verbose, folder):
-	global OutFolder, TmpFolder, TraceFolder, InputFolder
+	global OutFolder, TmpFolder, TraceFolder, ConcentratedInputFolder, AllInputFolder
 	OutFolder = os.path.join(folder, 'output_%d' % int(time()))
 	if os.path.exists(OutFolder):
 		raise Exception("ERROR: Output folder already exists! -> %s" % OutFolder)
 	else:
 		os.mkdir(OutFolder)
-	InputFolder = os.path.join(OutFolder, 'inputs') # (YN: added folder for generated inputs)
-	if not os.path.exists(InputFolder):
-		os.mkdir(InputFolder)
+	# (YN: added folders for generated inputs)
+	ConcentratedInputFolder = os.path.join(OutFolder, 'concentrated_inputs')
+	if not os.path.exists(ConcentratedInputFolder):
+		os.mkdir(ConcentratedInputFolder)
+	AllInputFolder = os.path.join(OutFolder, 'all_inputs')
+	if not os.path.exists(AllInputFolder):
+		os.mkdir(AllInputFolder)
+
 	TmpFolder = os.path.join(OutFolder, 'tmp')
 	if not os.path.exists(TmpFolder):
 		os.mkdir(TmpFolder)
@@ -387,8 +408,24 @@ def mutate_inputs(seed, poc_fmt, mutation_num, mutate_idx):
 	inputs = np.unique(inputs, axis = 0)[: mutation_num]
 	return inputs
 
+# (YN: added function to store generated inputs)
+def store_input(output_folder, input_counter, config_info, content):
+	input_filepath = os.path.join(output_folder, "input_" + str(input_counter))
+	logging.info("write input: " + str(input_filepath))
+	if config_info['input_format'] == 'bfile':
+		utils.write_bin(input_filepath, content)
+	else: # == 'text'
+		utils.write_txt(input_filepath, str(content)) # TODO needs to decide how it should be formatted
+	input_counter += 1
+	return input_counter
+
 def concentrate_fuzz(config_info):
-	global TraceHashCollection, ReportCollection, SeedPool, SeedTraceHashList, TraceFolder, TmpFolder, inputCounter
+	global TraceHashCollection, ReportCollection, SeedPool, SeedTraceHashList, TraceFolder, TmpFolder, ConcentratedInputCounter, AllInputCounter
+
+	# (YN: added some info output)
+	logging.info('Input format: %s' % config_info['input_format'])
+	logging.info('Store all input files: %s' % str(config_info['store_all_inputs']))
+
 	# init the randomization function
 	np.random.seed(config_info['rand_seed'])
 	logging.info("Initialized the random seed -> %d" % config_info['rand_seed'])
@@ -482,11 +519,8 @@ def concentrate_fuzz(config_info):
 					trace_path = os.path.join(TraceFolder, item[2])
 					# utils.write_pkl(trace_path, item[1])
 					np.savez(trace_path, trace=item[1])
-					# (YN: added to print "interesting" input files)
-					input_filepath = os.path.join(InputFolder, "input_" + str(inputCounter))
-					logging.debug("write input: " + str(input_filepath))
-					utils.write_bin(input_filepath, inputs[item[0]])
-					inputCounter += 1
+					# (YN: added to store "interesting" (concentrated) input files)
+					ConcentratedInputCounter = store_input(ConcentratedInputFolder, ConcentratedInputCounter, config_info, inputs[item[0]])
 				# check whether to add it into the seed pool
 				if item[3] == 'm' and item[2] not in SeedTraceHashList:
 					SeedPool.append([False, inputs[item[0]]])
@@ -494,6 +528,11 @@ def concentrate_fuzz(config_info):
 				# Update reports
 				if [item[2], item[3]] not in ReportCollection:
 					ReportCollection.append([item[2], item[3]])
+
+				# (YN: added to store "all" input files)
+				if config_info['store_all_inputs'] == True:
+					AllInputCounter = store_input(AllInputFolder, AllInputCounter, config_info, inputs[item[0]])
+
 			logging.debug("#Diff: %d; #ExeResult: %d; #seed: %d" % (len(diff_collection), len(crash_collection), len(SeedPool)))
 			# update sensitivity map
 			loc_sensitivity_map, crash_sensitivity_map = update_sens_map(mutate_idx, diff_collection, crash_collection, loc_sensitivity_map, crash_sensitivity_map)
