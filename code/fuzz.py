@@ -11,6 +11,7 @@ import hashlib
 import shutil
 import tracer
 import itertools
+import json
 from multiprocessing import Pool
 
 DefaultItems = ['trace_cmd', 'crash_cmd', 'poc', 'poc_fmt', 'folder', 'mutate_range', 'crash_tag']
@@ -33,7 +34,7 @@ MaxCombineNum = 10**20
 ConcentratedInputCounter = 0 # (YN: added input counter)
 inputFormat = 'bfile' # or 'text' (YN: added to determine input format)
 AllInputCounter = 0 # (YN: added input counter)
-generateAllInputs = False # (YN: added flag for generating all inputs)
+StoreAllInputs = False # (YN: added flag for generating all inputs)
 
 def parse_args():
 	parser = argparse.ArgumentParser(description="ConcFuzz")
@@ -171,7 +172,8 @@ def parse_args():
 
 def init_log(tag, verbose, folder):
 	global OutFolder, TmpFolder, TraceFolder, ConcentratedInputFolder, AllInputFolder
-	OutFolder = os.path.join(folder, 'output_%d' % int(time()))
+	#OutFolder = os.path.join(folder, 'output_%d' % int(time()))
+	OutFolder = os.path.join(folder, 'fuzzer') # (YN: adapted ouput folder)
 	if os.path.exists(OutFolder):
 		raise Exception("ERROR: Output folder already exists! -> %s" % OutFolder)
 	else:
@@ -222,10 +224,15 @@ def choose_seed():
 		return [SeedTraceHashList[selected_id], SeedPool[selected_id][1]]
 
 def prepare_args(input_no, poc, poc_fmt):
-	global TmpFolder
+	global TmpFolder, StoreAllInputs, AllInputFolder, AllInputCounter
 	# prepare the arguments
 	arg_num = len(poc_fmt)
 	arg_list = []
+
+	# (YN: added to store "all" input files)
+	input_filepath = os.path.join(AllInputFolder, "input_" + str(AllInputCounter) + "_" + str(input_no))
+	content = 0
+
 	for arg_no in range(arg_num):
 		if poc_fmt[arg_no][0] == 'bfile': # write the list into binary file
 			content = np.asarray(poc[poc_fmt[arg_no][1]: poc_fmt[arg_no][1]+poc_fmt[arg_no][2]]).astype(np.int)
@@ -240,6 +247,15 @@ def prepare_args(input_no, poc, poc_fmt):
 			arg_list.append(''.join(poc[poc_fmt[arg_no][1]: poc_fmt[arg_no][1]+poc_fmt[arg_no][2]]))
 		else:
 			raise Exception("ERROR: Unknown poc_fmt -> %s" % poc_fmt[arg_no][0])
+
+	# (YN: added to store "all" input files)
+	if StoreAllInputs:
+		logging.info("write input: " + str(input_filepath))
+		if arg_num == 1 and poc_fmt[0][0] == 'bfile':
+			utils.write_bin(input_filepath, content)
+		else: # == 'text'
+			utils.write_txt(input_filepath, json.dumps(arg_list))
+
 	return arg_list
 
 def prepare_cmd(cmd_list, replace_idx, arg_list):
@@ -415,16 +431,18 @@ def store_input(output_folder, input_counter, config_info, content):
 	if config_info['input_format'] == 'bfile':
 		utils.write_bin(input_filepath, content)
 	else: # == 'text'
-		utils.write_txt(input_filepath, str(content)) # TODO needs to decide how it should be formatted
+		utils.write_txt(input_filepath, json.dumps(list(content)))
 	input_counter += 1
 	return input_counter
 
 def concentrate_fuzz(config_info):
-	global TraceHashCollection, ReportCollection, SeedPool, SeedTraceHashList, TraceFolder, TmpFolder, ConcentratedInputCounter, AllInputCounter
+	global TraceHashCollection, ReportCollection, SeedPool, SeedTraceHashList, TraceFolder, TmpFolder, ConcentratedInputCounter, AllInputCounter, StoreAllInputs
 
 	# (YN: added some info output)
 	logging.info('Input format: %s' % config_info['input_format'])
 	logging.info('Store all input files: %s' % str(config_info['store_all_inputs']))
+
+	StoreAllInputs = config_info['store_all_inputs']
 
 	# init the randomization function
 	np.random.seed(config_info['rand_seed'])
@@ -501,6 +519,7 @@ def concentrate_fuzz(config_info):
 			# Delete all the tmp files
 			shutil.rmtree(TmpFolder)
 			os.mkdir(TmpFolder)
+			AllInputCounter += 1
 			# if input_num != len(result_collection):
 			# 	missed_ids = set(range(input_num)) - set([item[0] for item in result_collection])
 			# 	missed_inputs = [inputs[id] for id in missed_ids]
@@ -528,10 +547,6 @@ def concentrate_fuzz(config_info):
 				# Update reports
 				if [item[2], item[3]] not in ReportCollection:
 					ReportCollection.append([item[2], item[3]])
-
-				# (YN: added to store "all" input files)
-				if config_info['store_all_inputs'] == True:
-					AllInputCounter = store_input(AllInputFolder, AllInputCounter, config_info, inputs[item[0]])
 
 			logging.debug("#Diff: %d; #ExeResult: %d; #seed: %d" % (len(diff_collection), len(crash_collection), len(SeedPool)))
 			# update sensitivity map
