@@ -12,7 +12,7 @@ def ifTracer(cmd_list, bin):
 	# parse output (stderr)
 	if_list = []
 	for line in err.split("\n"):
-		if line.startswith("0x00000"):
+		if line.startswith("0x"):
 			if_list.append(line)
 	return if_list
 
@@ -22,8 +22,11 @@ def rewrite_trace_binary(bin):
 	Rewritten binary is named as bin.trace
 	"""
 	trace_bin = bin + ".trace"
-	patch_cmd = [env.e9tool_path, "-M", "'condjump'", "-P", "'entry(addr)@printaddr'",
+	curr_dir = os.getcwd()
+	os.chdir(env.e9patch_path)
+	patch_cmd = ["./e9tool", "-M", "'condjump'", "-P", "'entry(addr)@printaddr'",
 		"-o", trace_bin, bin]
+	os.chdir(curr_dir)
 	p = subprocess.Popen(patch_cmd)
 	p.communicate()
 	if not os.path.isfile(trace_bin):

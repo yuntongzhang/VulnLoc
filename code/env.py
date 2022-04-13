@@ -3,4 +3,4 @@
 # iflinetracer_path="/opt/fuzzer/deps/iftracer/ifLineTracer/libifLineTracer.so"
 # libcbr_path="/opt/fuzzer/deps/dynamorio/build/api/bin/libcbr.so"
 
-e9tool_path = "/opt/fuzzer/deps/e9patch/e9tool"
+e9patch_path = "/opt/fuzzer/deps/e9patch/"
