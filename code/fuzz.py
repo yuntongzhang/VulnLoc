@@ -59,7 +59,7 @@ def parse_args():
 				raise Exception("ERROR: The folder does not exist -> %s" % item[1])
 			detailed_config[item[0]] = item[1]
 		elif item[0] == 'bin_path':
-			if not os.path.exist(item[1]):
+			if not os.path.exists(item[1]):
 				raise Exception("ERROR: The binary does not exist -> %s" % item[1])
 			detailed_config[item[0]] = item[1]
 		else:

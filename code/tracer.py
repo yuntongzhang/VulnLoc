@@ -7,7 +7,7 @@ import sys
 def ifTracer(cmd_list, bin):
 	trace_bin = bin + ".trace"
 	cmd_list = [ trace_bin if s == bin else s for s in cmd_list ]
-	p = subprocess.Popen(cmd_list, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+	p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	_, err = p.communicate()
 	# parse output (stderr)
 	if_list = []
@@ -24,13 +24,13 @@ def rewrite_trace_binary(bin):
 	trace_bin = bin + ".trace"
 	curr_dir = os.getcwd()
 	os.chdir(env.e9patch_path)
-	patch_cmd = ["./e9tool", "-M", "'condjump'", "-P", "'entry(addr)@printaddr'",
-		"-o", trace_bin, bin]
-	os.chdir(curr_dir)
+	patch_cmd = ['./e9tool', '-M', 'condjump', '-P', 'entry(addr)@printaddr',
+		'-o', trace_bin, bin]
 	p = subprocess.Popen(patch_cmd)
 	p.communicate()
 	if not os.path.isfile(trace_bin):
 		sys.exit("Failed to use e9patch to create trace binary. Aborting ...")
+	os.chdir(curr_dir)
 
 
 def exe_bin(cmd_list):
