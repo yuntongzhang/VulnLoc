@@ -37,7 +37,7 @@ void entry(const void *addr) {
 
 // print out trace to stderr
 void fini(void) {
-    for (ADDR *tmp = trace_head; tmp != NULL; tmp = tmp->next)
+    for (ADDR *tmp = trace_head; tmp != NULL; tmp = tmp->next) {
         fprintf(stderr, "%p\n", tmp->content);
     }
 }

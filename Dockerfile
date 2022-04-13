@@ -27,8 +27,12 @@ WORKDIR /opt/fuzzer/deps
 RUN pip install --target=/opt/fuzzer/pypackages pyelftools
 
 # (YT: use e9patch instead of dynamorio)
-RUN wget -O e9patch https://github.com/GJDuck/e9patch/archive/889a412ecdbf072d3626b1cc44e59439b030157c.zip
+RUN wget -O e9patch.zip https://github.com/GJDuck/e9patch/archive/889a412ecdbf072d3626b1cc44e59439b030157c.zip
+RUN unzip e9patch.zip
+RUN rm e9patch.zip
+RUN mv e9patch-889a412ecdbf072d3626b1cc44e59439b030157c e9patch
 WORKDIR /opt/fuzzer/deps/e9patch
+RUN ls
 RUN ./build.sh
 COPY ./code/printaddr.c ./examples/
 RUN ./e9compile.sh examples/printaddr.c
