@@ -14,7 +14,7 @@ import itertools
 import json
 from multiprocessing import Pool
 
-DefaultItems = ['trace_cmd', 'crash_cmd', 'poc', 'poc_fmt', 'folder', 'mutate_range', 'crash_tag']
+DefaultItems = ['trace_cmd', 'crash_cmd', 'poc', 'poc_fmt', 'folder', 'mutate_range', 'crash_tag', 'bin_path']
 OutFolder = ''
 TmpFolder = ''
 TraceFolder = ''
@@ -57,6 +57,10 @@ def parse_args():
 		if item[0] == 'folder':
 			if not os.path.exists(item[1]):
 				raise Exception("ERROR: The folder does not exist -> %s" % item[1])
+			detailed_config[item[0]] = item[1]
+		elif item[0] == 'bin_path':
+			if not os.path.exist(item[1]):
+				raise Exception("ERROR: The binary does not exist -> %s" % item[1])
 			detailed_config[item[0]] = item[1]
 		else:
 			detailed_config[item[0]] = item[1].split(';')
@@ -271,10 +275,10 @@ def calc_trace_hash(trace):
 	trace_str = '\n'.join(trace)
 	return hashlib.sha256(trace_str).hexdigest()
 
-def just_trace(input_no, raw_args, poc_fmt, trace_cmd, trace_replace_idx):
+def just_trace(input_no, raw_args, poc_fmt, trace_cmd, trace_replace_idx, bin_path):
 	processed_args = prepare_args(input_no, raw_args, poc_fmt)
 	cmd = prepare_cmd(trace_cmd, trace_replace_idx, processed_args)
-	trace = tracer.ifTracer(cmd)
+	trace = tracer.ifTracer(cmd, bin_path)
 	trace_hash = calc_trace_hash(trace)
 	return trace, trace_hash
 
@@ -317,10 +321,10 @@ def trace_cmp(seed_trace, trace):
 			return id
 	return min_len
 
-def gen_report(input_no, raw_args, poc_fmt, trace_cmd, trace_replace_idx, crash_cmd, crash_replace_idx, crash_info, seed_trace):
+def gen_report(input_no, raw_args, poc_fmt, trace_cmd, trace_replace_idx, crash_cmd, crash_replace_idx, crash_info, seed_trace, bin_path):
 	processed_args = prepare_args(input_no, raw_args, poc_fmt)
 	trace_cmd = prepare_cmd(trace_cmd, trace_replace_idx, processed_args)
-	trace = tracer.ifTracer(trace_cmd)
+	trace = tracer.ifTracer(trace_cmd, bin_path)
 	trace_diff_id = trace_cmp(seed_trace, trace)
 	trace_hash = calc_trace_hash(trace)
 	crash_cmd = prepare_cmd(crash_cmd, crash_replace_idx, processed_args)
@@ -448,9 +452,13 @@ def concentrate_fuzz(config_info):
 	np.random.seed(config_info['rand_seed'])
 	logging.info("Initialized the random seed -> %d" % config_info['rand_seed'])
 
+	# prepare the trace binary
+	tracer.rewrite_trace_binary(config_info['bin_path'])
+
 	'''Process the PoC'''
 	# generate the trace for the poc
-	trace, trace_hash = just_trace(0, config_info['poc'], config_info['poc_fmt'], config_info['trace_cmd'], config_info['trace_replace_idx'])
+	trace, trace_hash = just_trace(0, config_info['poc'], config_info['poc_fmt'],
+		config_info['trace_cmd'], config_info['trace_replace_idx'], config_info['bin_path'])
 	logging.debug('PoC Hash: %s' % trace_hash)
 	seed_len = len(config_info['poc'])
 	# save the trace
@@ -509,8 +517,9 @@ def concentrate_fuzz(config_info):
 			for input_no in range(input_num):
 				pool.apply_async(
 					gen_report,
-					args = (input_no, inputs[input_no], config_info['poc_fmt'], config_info['trace_cmd'], config_info['trace_replace_idx'],
-						   config_info['crash_cmd'], config_info['crash_replace_idx'], config_info['crash_tag'], selected_seed_trace),
+					args = (input_no, inputs[input_no], config_info['poc_fmt'], config_info['trace_cmd'],
+							config_info['trace_replace_idx'], config_info['crash_cmd'], config_info['crash_replace_idx'],
+							config_info['crash_tag'], selected_seed_trace, config_info['bin_path']),
 					callback = result_collection.append
 				)
 			pool.close()
