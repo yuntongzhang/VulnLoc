@@ -41,6 +41,8 @@ RUN ./e9compile.sh examples/printaddr.c
 WORKDIR /opt/fuzzer/
 RUN mkdir bugzilla-2633
 WORKDIR /opt/fuzzer/bugzilla-2633
+RUN mkdir vulnloc-output
+COPY ./bugzilla_2633.config ./vulnloc-config
 RUN wget -O exploit https://github.com/asarubbo/poc/raw/master/00107-libtiff-heapoverflow-PSDataColorContig
 RUN git clone https://github.com/vadz/libtiff.git source
 WORKDIR /opt/fuzzer/bugzilla-2633/source
