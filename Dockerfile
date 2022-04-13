@@ -37,6 +37,18 @@ RUN ./build.sh
 COPY ./code/printaddr.c ./examples/
 RUN ./e9compile.sh examples/printaddr.c
 
+# (YT: add setup of bugzilla-2633 for testing)
+WORKDIR /opt/fuzzer/
+RUN mkdir bugzilla-2633
+WORKDIR /opt/fuzzer/bugzilla-2633
+RUN wget -O exploit https://github.com/asarubbo/poc/raw/master/00107-libtiff-heapoverflow-PSDataColorContig
+RUN git clone https://github.com/vadz/libtiff.git source
+WORKDIR /opt/fuzzer/bugzilla-2633/source
+RUN git checkout f3069a5
+RUN ./configure
+RUN make CFLAGS="-static" CXXFLAGS="-static" -j10
+RUN cp tools/tiff2ps ../
+
 # (YN: skipped setup of test cve)
 ## set up CVE-2016-5314
 #RUN mkdir cves
