@@ -41,7 +41,8 @@ def exe_bin(cmd_list):
 
 def exe_crash_bin(cmd_list):
 	redfat_env = { "LD_PRELOAD" : "/opt/fuzzer/deps/RedFat/install/libredfat.so" }
-	modified_env = { **os.environ, **redfat_env}
+	modified_env = os.environ
+	modified_env.update(redfat_env)
 	p1 = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=modified_env)
 	out, err = p1.communicate()
 	return out, err 

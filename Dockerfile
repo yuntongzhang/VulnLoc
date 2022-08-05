@@ -60,6 +60,8 @@ RUN ./configure
 RUN make CFLAGS="-static" CXXFLAGS="-static" -j10
 RUN cp tools/tiff2ps ../
 
+WORKDIR /opt/fuzzer
+
 # (YN: skipped setup of test cve)
 ## set up CVE-2016-5314
 #RUN mkdir cves
