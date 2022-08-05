@@ -25,8 +25,8 @@ SeedPool = [] # Each element is in the fmt of [<process_tag>, <seed_content>]. <
 SeedTraceHashList = []
 ReportCollection = [] # Each element if in the fmt of [<trace_hash>, <tag>]. <tag>: m - malicious / b - benign
 TraceHashCollection = []
-GlobalTimeout = 60 * 60 # 1 hour
-LocalTimeout = 60 * 60 # 1 hour
+GlobalTimeout = 30 * 60 # 30-minute
+LocalTimeout = 30 * 60 # 30-minute
 DefaultRandSeed = 3
 DefaultMutateNum = 200
 DefaultMaxCombination = 2
@@ -311,6 +311,11 @@ def check_exploit(err, crash_info):
 			return "m"
 		else:
 			return "b"
+	elif crash_info[0] == "redfat":
+		if "REDFAT ERROR" in err:
+			return "m"
+		else:
+			return "b"
 	else:
 		raise Exception('ERROR: Unknown crash info -> %s' % crash_info)
 
@@ -328,7 +333,7 @@ def gen_report(input_no, raw_args, poc_fmt, trace_cmd, trace_replace_idx, crash_
 	trace_diff_id = trace_cmp(seed_trace, trace)
 	trace_hash = calc_trace_hash(trace)
 	crash_cmd = prepare_cmd(crash_cmd, crash_replace_idx, processed_args)
-	_, err = tracer.exe_bin(crash_cmd)
+	_, err = tracer.exe_crash_bin(crash_cmd)
 	crash_result = check_exploit(err, crash_info)
 	return [input_no, trace, trace_hash, crash_result, trace_diff_id]
 

@@ -5,9 +5,10 @@ RUN apt update --fix-missing
 RUN apt install -y build-essential
 RUN apt install -y git vim unzip python-dev python-pip ipython wget libssl-dev g++-multilib doxygen transfig imagemagick ghostscript zlib1g-dev valgrind
 
-WORKDIR /opt
-RUN mkdir workspace
+# prepare code
 WORKDIR /opt/fuzzer
+COPY . .
+
 RUN mkdir deps
 WORKDIR /opt/fuzzer/deps
 
@@ -32,10 +33,18 @@ RUN unzip e9patch.zip
 RUN rm e9patch.zip
 RUN mv e9patch-889a412ecdbf072d3626b1cc44e59439b030157c e9patch
 WORKDIR /opt/fuzzer/deps/e9patch
-RUN ls
 RUN ./build.sh
 COPY ./code/printaddr.c ./examples/
 RUN ./e9compile.sh examples/printaddr.c
+
+# (YT: use redfat instead of Valgrind for detection)
+WORKDIR /opt/fuzzer/deps/
+RUN wget -O redfat.zip https://github.com/GJDuck/RedFat/archive/refs/tags/v0.1.0.zip
+RUN unzip redfat.zip
+RUN rm redfat.zip
+RUN mv RedFat-0.1.0 RedFat
+WORKDIR /opt/fuzzer/deps/RedFat
+RUN ./build.sh
 
 # (YT: add setup of bugzilla-2633 for testing)
 WORKDIR /opt/fuzzer/
@@ -78,17 +87,3 @@ RUN cp tools/tiff2ps ../
 # RUN ./configure
 # RUN make
 # RUN make install
-
-# prepare code
-WORKDIR /opt/fuzzer
-RUN mkdir code
-WORKDIR /opt/fuzzer/code
-COPY ./code/fuzz ./
-COPY ./code/fuzz.py ./
-COPY ./code/parse_dwarf.py ./
-COPY ./code/patchloc.py ./
-COPY ./code/tracer.py ./
-COPY ./code/utils.py ./
-COPY ./code/env.py ./
-
-WORKDIR /opt/fuzzer
