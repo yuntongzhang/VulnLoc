@@ -16,7 +16,9 @@ COPY . .
 # RUN mkdir deps
 RUN git submodule init
 RUN git submodule update
-WORKDIR /opt/fuzzer/deps
+
+RUN ./build.sh
+# WORKDIR /opt/fuzzer/deps
 
 # RUN mkdir -p /opt/fuzzer/pypackages/lib/python2.7/site-packages
 # ENV PYTHONPATH="/opt/fuzzer/pypackages/lib/python2.7/site-packages:/opt/fuzzer/pypackages:${PYTHONPATH}"
@@ -38,10 +40,11 @@ WORKDIR /opt/fuzzer/deps
 # RUN unzip e9patch.zip
 # RUN rm e9patch.zip
 # RUN mv e9patch-889a412ecdbf072d3626b1cc44e59439b030157c e9patch
-WORKDIR /opt/fuzzer/deps/e9patch
-RUN ./build.sh
-COPY ./code/printaddr.c ./examples/
-RUN ./e9compile.sh examples/printaddr.c
+
+# WORKDIR /opt/fuzzer/deps/e9patch
+# RUN ./build.sh
+# COPY ./code/printaddr.c ./examples/
+# RUN ./e9compile.sh examples/printaddr.c
 
 # (YT: use redfat instead of Valgrind for detection)
 # WORKDIR /opt/fuzzer/deps/
@@ -49,11 +52,12 @@ RUN ./e9compile.sh examples/printaddr.c
 # RUN unzip redfat.zip
 # RUN rm redfat.zip
 # RUN mv RedFat-0.1.0 RedFat
-WORKDIR /opt/fuzzer/deps/RedFat
-RUN ./build.sh
+
+# WORKDIR /opt/fuzzer/deps/RedFat
+# RUN ./build.sh
 
 # (YT: add setup of bugzilla-2633 for testing)
-WORKDIR /opt/fuzzer/
+WORKDIR /opt/fuzzer
 RUN mkdir bugzilla-2633
 WORKDIR /opt/fuzzer/bugzilla-2633
 RUN mkdir vulnloc-output
