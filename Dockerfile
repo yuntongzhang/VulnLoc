@@ -1,48 +1,57 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 # Dependencies
 RUN apt update --fix-missing
 RUN apt install -y build-essential
-RUN apt install -y git vim unzip python-dev python-pip ipython wget libssl-dev g++-multilib doxygen transfig imagemagick ghostscript zlib1g-dev valgrind
+RUN apt install -y git vim unzip wget libssl-dev g++-multilib doxygen transfig imagemagick ghostscript zlib1g-dev valgrind
+# add this for installing latest version of python3.8
+RUN add-apt-repository ppa:deadsnakes/ppa
+RUN apt update
+
+RUN apt install -y python3-pip gdb python3-dev python-dev python3.8
+
+RUN python3.8 -m pip install pyelftools numpy==1.16.6
 
 # prepare code
 WORKDIR /opt/fuzzer
 COPY . .
 
-RUN mkdir deps
+# RUN mkdir deps
+RUN git submodule init
 WORKDIR /opt/fuzzer/deps
 
-RUN mkdir -p /opt/fuzzer/pypackages/lib/python2.7/site-packages
-ENV PYTHONPATH="/opt/fuzzer/pypackages/lib/python2.7/site-packages:/opt/fuzzer/pypackages:${PYTHONPATH}"
+# RUN mkdir -p /opt/fuzzer/pypackages/lib/python2.7/site-packages
+# ENV PYTHONPATH="/opt/fuzzer/pypackages/lib/python2.7/site-packages:/opt/fuzzer/pypackages:${PYTHONPATH}"
 
 # Installing numpy
-RUN wget https://github.com/numpy/numpy/releases/download/v1.16.6/numpy-1.16.6.zip
-RUN unzip numpy-1.16.6.zip
-RUN rm numpy-1.16.6.zip
-RUN mv numpy-1.16.6 numpy
-WORKDIR /opt/fuzzer/deps/numpy
-RUN python setup.py install --prefix=/opt/fuzzer/pypackages
-WORKDIR /opt/fuzzer/deps
+# RUN wget https://github.com/numpy/numpy/releases/download/v1.16.6/numpy-1.16.6.zip
+# RUN unzip numpy-1.16.6.zip
+# RUN rm numpy-1.16.6.zip
+# RUN mv numpy-1.16.6 numpy
+# WORKDIR /opt/fuzzer/deps/numpy
+# RUN python setup.py install --prefix=/opt/fuzzer/pypackages
+# WORKDIR /opt/fuzzer/deps
 
 # install pyelftools
-RUN pip install --target=/opt/fuzzer/pypackages pyelftools
+# RUN pip install --target=/opt/fuzzer/pypackages pyelftools
 
 # (YT: use e9patch instead of dynamorio)
-RUN wget -O e9patch.zip https://github.com/GJDuck/e9patch/archive/889a412ecdbf072d3626b1cc44e59439b030157c.zip
-RUN unzip e9patch.zip
-RUN rm e9patch.zip
-RUN mv e9patch-889a412ecdbf072d3626b1cc44e59439b030157c e9patch
+# RUN wget -O e9patch.zip https://github.com/GJDuck/e9patch/archive/889a412ecdbf072d3626b1cc44e59439b030157c.zip
+# RUN unzip e9patch.zip
+# RUN rm e9patch.zip
+# RUN mv e9patch-889a412ecdbf072d3626b1cc44e59439b030157c e9patch
 WORKDIR /opt/fuzzer/deps/e9patch
 RUN ./build.sh
-COPY ./code/printaddr.c ./examples/
-RUN ./e9compile.sh examples/printaddr.c
+RUN ./e9compile.sh /opt/fuzzer/code/printaddr.c
+# COPY ./code/printaddr.c ./examples/
+# RUN ./e9compile.sh examples/printaddr.c
 
 # (YT: use redfat instead of Valgrind for detection)
-WORKDIR /opt/fuzzer/deps/
-RUN wget -O redfat.zip https://github.com/GJDuck/RedFat/archive/refs/tags/v0.1.0.zip
-RUN unzip redfat.zip
-RUN rm redfat.zip
-RUN mv RedFat-0.1.0 RedFat
+# WORKDIR /opt/fuzzer/deps/
+# RUN wget -O redfat.zip https://github.com/GJDuck/RedFat/archive/refs/tags/v0.1.0.zip
+# RUN unzip redfat.zip
+# RUN rm redfat.zip
+# RUN mv RedFat-0.1.0 RedFat
 WORKDIR /opt/fuzzer/deps/RedFat
 RUN ./build.sh
 
