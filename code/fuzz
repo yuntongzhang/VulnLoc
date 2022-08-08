@@ -4,4 +4,4 @@ set -eu
 # export PYTHONPATH="/opt/fuzzer/pypackages/lib/python2.7/site-packages:/opt/fuzzer/pypackages"
 # export PATH="/opt/fuzzer/deps/cmake/bin:/opt/fuzzer/deps/dynamorio/build/bin64:/opt/fuzzer/deps/valgrind/coregrind:${PATH}"
 
-python3.8 /opt/fuzzer/code/fuzz.py $@
+python3 /opt/fuzzer/code/fuzz.py $@

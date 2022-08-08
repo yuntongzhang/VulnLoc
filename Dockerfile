@@ -3,14 +3,11 @@ FROM ubuntu:18.04
 # Dependencies
 RUN apt update --fix-missing
 RUN apt install -y build-essential software-properties-common
-RUN apt install -y git vim unzip wget libssl-dev g++-multilib doxygen transfig imagemagick ghostscript zlib1g-dev valgrind 
-# add this for installing latest version of python3.8
-RUN add-apt-repository ppa:deadsnakes/ppa
-RUN apt update
+RUN apt install -y git gdb vim unzip wget libssl-dev g++-multilib doxygen transfig imagemagick ghostscript zlib1g-dev valgrind 
 
-RUN apt install -y python3-pip gdb python3-dev python-dev python3.8
+RUN apt install -y python3-pip python3-dev python-dev
 
-RUN python3.8 -m pip install pyelftools numpy==1.16.6
+RUN python3 -m pip install pyelftools numpy==1.16.6
 
 # prepare code
 WORKDIR /opt/fuzzer
