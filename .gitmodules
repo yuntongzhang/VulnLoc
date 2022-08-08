@@ -1,0 +1,8 @@
+[submodule "deps/RedFat"]
+	path = deps/RedFat
+	url = https://github.com/yuntongzhang/RedFat.git
+	ignore = dirty
+[submodule "deps/e9patch"]
+	path = deps/e9patch
+	url = https://github.com/GJDuck/e9patch.git
+	ignore = dirty
