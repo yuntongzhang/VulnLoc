@@ -40,9 +40,8 @@ WORKDIR /opt/fuzzer/deps
 # RUN mv e9patch-889a412ecdbf072d3626b1cc44e59439b030157c e9patch
 WORKDIR /opt/fuzzer/deps/e9patch
 RUN ./build.sh
-RUN ./e9compile.sh /opt/fuzzer/code/printaddr.c
-# COPY ./code/printaddr.c ./examples/
-# RUN ./e9compile.sh examples/printaddr.c
+COPY ./code/printaddr.c ./examples/
+RUN ./e9compile.sh examples/printaddr.c
 
 # (YT: use redfat instead of Valgrind for detection)
 # WORKDIR /opt/fuzzer/deps/
