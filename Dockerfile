@@ -15,6 +15,7 @@ COPY . .
 
 # RUN mkdir deps
 RUN git submodule init
+RUN git submodule update
 WORKDIR /opt/fuzzer/deps
 
 # RUN mkdir -p /opt/fuzzer/pypackages/lib/python2.7/site-packages
