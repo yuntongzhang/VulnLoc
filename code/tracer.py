@@ -23,7 +23,7 @@ def rewrite_trace_binary(bin):
 	"""
 	trace_bin = bin + ".trace"
 	curr_dir = os.getcwd()
-	os.chdir(env.e9patch_path)
+	os.chdir(env.e9patch_dir)
 	patch_cmd = ['./e9tool', '-M', 'condjump', '-P', 'entry(addr)@printaddr',
 		'-o', trace_bin, bin]
 	p = subprocess.Popen(patch_cmd)
@@ -33,19 +33,10 @@ def rewrite_trace_binary(bin):
 	os.chdir(curr_dir)
 
 
-def exe_bin(cmd_list):
+def exec_bin(cmd_list):
 	p1 = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	out, err = p1.communicate()
 	return out, err
-
-
-def exe_crash_bin(cmd_list):
-	redfat_env = { "LD_PRELOAD" : "/opt/fuzzer/deps/RedFat/install/libredfat.so" }
-	modified_env = os.environ
-	modified_env.update(redfat_env)
-	p1 = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=modified_env)
-	out, err = p1.communicate()
-	return out, err 
 
 
 # def ifTracer(cmd_list):

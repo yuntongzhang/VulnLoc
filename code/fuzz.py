@@ -2,17 +2,19 @@ import argparse
 import ConfigParser
 import logging
 import os
-import utils
 import numpy as np
 from time import time
 import string
 from copy import deepcopy as dc
 import hashlib
 import shutil
-import tracer
 import itertools
 import json
 from multiprocessing import Pool
+
+import utils
+import tracer
+import oracle
 
 DefaultItems = ['trace_cmd', 'crash_cmd', 'poc', 'poc_fmt', 'folder', 'mutate_range', 'crash_tag', 'bin_path']
 OutFolder = ''
@@ -333,7 +335,7 @@ def gen_report(input_no, raw_args, poc_fmt, trace_cmd, trace_replace_idx, crash_
 	trace_diff_id = trace_cmp(seed_trace, trace)
 	trace_hash = calc_trace_hash(trace)
 	crash_cmd = prepare_cmd(crash_cmd, crash_replace_idx, processed_args)
-	_, err = tracer.exe_crash_bin(crash_cmd)
+	_, err = oracle.exec_bin(crash_cmd)
 	crash_result = check_exploit(err, crash_info)
 	return [input_no, trace, trace_hash, crash_result, trace_diff_id]
 
@@ -457,8 +459,9 @@ def concentrate_fuzz(config_info):
 	np.random.seed(config_info['rand_seed'])
 	logging.info("Initialized the random seed -> %d" % config_info['rand_seed'])
 
-	# prepare the trace binary
+	# prepare different binaries
 	tracer.rewrite_trace_binary(config_info['bin_path'])
+	oracle.rewrite_binary_with_oracle(config_info['bin_path'])
 
 	'''Process the PoC'''
 	# generate the trace for the poc
