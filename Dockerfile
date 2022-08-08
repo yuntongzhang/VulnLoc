@@ -2,8 +2,8 @@ FROM ubuntu:18.04
 
 # Dependencies
 RUN apt update --fix-missing
-RUN apt install -y build-essential
-RUN apt install -y git vim unzip wget libssl-dev g++-multilib doxygen transfig imagemagick ghostscript zlib1g-dev valgrind
+RUN apt install -y build-essential software-properties-common
+RUN apt install -y git vim unzip wget libssl-dev g++-multilib doxygen transfig imagemagick ghostscript zlib1g-dev valgrind 
 # add this for installing latest version of python3.8
 RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt update
