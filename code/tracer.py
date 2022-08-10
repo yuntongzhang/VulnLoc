@@ -1,10 +1,28 @@
-import env
 import subprocess
 import os
 import sys
+import hashlib
 
-# (YT: this version is for e9patch)
-def ifTracer(cmd_list, bin):
+import values
+
+
+def rewrite_trace_binary(bin):
+	"""
+	Rewritten binary is named as bin.trace
+	"""
+	trace_bin = bin + ".trace"
+	curr_dir = os.getcwd()
+	os.chdir(values.e9patch_dir)
+	patch_cmd = ['./e9tool', '-M', 'condjump', '-P', 'entry(addr)@printaddr',
+		'-o', trace_bin, bin]
+	p = subprocess.Popen(patch_cmd)
+	p.communicate()
+	if not os.path.isfile(trace_bin):
+		sys.exit("Failed to use e9patch to create trace binary. Aborting ...")
+	os.chdir(curr_dir)
+
+
+def exec_bin(cmd_list, bin):
 	trace_bin = bin + ".trace"
 	cmd_list = [ trace_bin if s == bin else s for s in cmd_list ]
 	p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -17,26 +35,17 @@ def ifTracer(cmd_list, bin):
 	return if_list
 
 
-def rewrite_trace_binary(bin):
-	"""
-	Rewritten binary is named as bin.trace
-	"""
-	trace_bin = bin + ".trace"
-	curr_dir = os.getcwd()
-	os.chdir(env.e9patch_dir)
-	patch_cmd = ['./e9tool', '-M', 'condjump', '-P', 'entry(addr)@printaddr',
-		'-o', trace_bin, bin]
-	p = subprocess.Popen(patch_cmd)
-	p.communicate()
-	if not os.path.isfile(trace_bin):
-		sys.exit("Failed to use e9patch to create trace binary. Aborting ...")
-	os.chdir(curr_dir)
+def calc_trace_hash(trace):
+	trace_str = '\n'.join(trace)
+	return hashlib.sha256(trace_str).hexdigest()
 
 
-def exec_bin(cmd_list):
-	p1 = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	out, err = p1.communicate()
-	return out, err
+def trace_cmp(seed_trace, trace):
+	min_len = min(len(seed_trace), len(trace))
+	for id in range(min_len):
+		if seed_trace[id] != trace[id]:
+			return id
+	return min_len
 
 
 # def ifTracer(cmd_list):

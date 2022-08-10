@@ -41,3 +41,7 @@ echo -e "${YELLOW}$0${OFF}: RedFat has been built!"
 popd
 
 echo -e "${YELLOW}$0${OFF}: VulnLoc build finished."
+
+### note: for some reason, github CI runner machine fails to build e9patch properly, with error
+### 'illegal instruction' when running e9patch inside the container. So, for those images,
+### rebuild e9patch and also e9patch inside redfat with ./build.sh
