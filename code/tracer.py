@@ -6,45 +6,47 @@ import hashlib
 import values
 
 
-def rewrite_trace_binary(bin):
-	"""
-	Rewritten binary is named as bin.trace
-	"""
-	trace_bin = bin + ".trace"
-	curr_dir = os.getcwd()
-	os.chdir(values.e9patch_dir)
-	patch_cmd = ['./e9tool', '-M', 'condjump', '-P', 'entry(addr)@printaddr', '-o', trace_bin, bin]
-	p = subprocess.Popen(patch_cmd)
-	p.communicate()
-	if not os.path.isfile(trace_bin):
-		sys.exit("Failed to use e9patch to create trace binary. Aborting ...")
-	os.chdir(curr_dir)
+def rewrite_trace_binary(bin_path):
+    """
+    Rewritten binary is named as bin.trace
+    """
+    trace_bin_path = bin_path + ".trace"
+    curr_dir = os.getcwd()
+    os.chdir(values.e9patch_dir)
+    patch_cmd = ['./e9tool', '-M', 'condjump', '-P', 'entry(addr)@printaddr',
+		'-o', trace_bin_path, bin_path]
+    p = subprocess.Popen(patch_cmd)
+    p.communicate()
+    if not os.path.isfile(trace_bin_path):
+        sys.exit("Failed to use e9patch to create trace binary. Aborting ...")
+    os.chdir(curr_dir)
 
 
-def exec_bin(cmd_list, bin):
-	trace_bin = bin + ".trace"
-	cmd_list = [ trace_bin if s == bin else s for s in cmd_list ]
-	p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8', errors='replace')
-	_, err = p.communicate()
-	# parse output (stderr)
-	if_list = []
-	for line in err.split("\n"):
-		if line.startswith("0x"):
-			if_list.append(line)
-	return if_list
+def exec_bin(cmd_list, bin_path):
+    trace_bin_path = bin_path + ".trace"
+    cmd_list = [trace_bin_path if s == bin_path else s for s in cmd_list]
+    p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, encoding='utf-8', errors='replace')
+    _, err = p.communicate()
+    # parse output (stderr)
+    if_list = []
+    for line in err.split("\n"):
+        if line.startswith("0x"):
+            if_list.append(line)
+    return if_list
 
 
 def calc_trace_hash(trace):
-	trace_str = '\n'.join(trace)
-	return hashlib.sha256(trace_str.encode('utf-8')).hexdigest()
+    trace_str = '\n'.join(trace)
+    return hashlib.sha256(trace_str.encode('utf-8')).hexdigest()
 
 
 def trace_cmp(seed_trace, trace):
-	min_len = min(len(seed_trace), len(trace))
-	for id in range(min_len):
-		if seed_trace[id] != trace[id]:
-			return id
-	return min_len
+    min_len = min(len(seed_trace), len(trace))
+    for idx in range(min_len):
+        if seed_trace[idx] != trace[idx]:
+            return idx
+    return min_len
 
 
 # def ifTracer(cmd_list):
@@ -87,7 +89,8 @@ def trace_cmp(seed_trace, trace):
 # 	# print(listAddr)
 # 	return listAddr
 
-# def tcheckIf(flineNumberDict, name, insID, fileBoundRangesList, fileBoundIndexList, fileAddrDict, lineAddrDict):
+# def tcheckIf(flineNumberDict, name, insID, fileBoundRangesList, fileBoundIndexList,
+# 		fileAddrDict, lineAddrDict):
 # 	''' Search for 10 addresses behind the one found'''
 # 	# print(lineNumberDict)
 # 	found = False
@@ -134,7 +137,8 @@ def trace_cmp(seed_trace, trace):
 
 #     for i in range(len(linesCBR)):
 #         addr = linesCBR[i]
-#         ifCollections.append(tcheckIf(flineNumberDict, addr, i, fileBoundRangesList, fileBoundIndexList, fileAddrDict, lineAddrDict))
+#         ifCollections.append(tcheckIf(flineNumberDict, addr, i, fileBoundRangesList,
+# 				fileBoundIndexList, fileAddrDict, lineAddrDict))
 
 #     idx_list = []
 #     line_list = []
@@ -150,14 +154,16 @@ def trace_cmp(seed_trace, trace):
 
 #     return idx_list, line_list, nameDict
 
-# def findIfSrcInOrderDyn(binFilePath, srcFilePath, flineNumberDict, fileBoundRangesList, fileBoundIndexList,
-# 						cmdFile='cmd.txt', process_id=0, timeout=-1):
+# def findIfSrcInOrderDyn(binFilePath, srcFilePath, flineNumberDict, fileBoundRangesList,
+# 			fileBoundIndexList, cmdFile='cmd.txt', process_id=0, timeout=-1):
 # 	# start = datetime.now()
 
-# 	# flineNumberDict, fileBoundRangesList, fileBoundIndexList = getMainAddr(binFilePath, srcFilePath)
-# 	''' Get the linenumbers of conditional statements in the same file for which you got the line numbers, in cmpLineNumbers '''
+# 	# flineNumberDict, fileBoundRangesList, fileBoundIndexList = getMainAddr(
+# 				binFilePath, srcFilePath)
+# 	# Get the linenumbers of conditional statements in the same file for which you
+# 	# got the line numbers, in cmpLineNumbers
 # 	idxList, cmpLineList, nameDict = findIfOrder(flineNumberDict, cmdFile, fileBoundRangesList,
-# 												 fileBoundIndexList)  # need to save both idxList, cmpLineList
+# 					fileBoundIndexList)  # need to save both idxList, cmpLineList
 # 	srcLineList = []
 
 # 	fnameDict = {}
@@ -182,7 +188,8 @@ def trace_cmp(seed_trace, trace):
 
 # 	timeout = 5
 # 	if timeout > 0:
-# 		cmdlist = ['timeout', str(timeout), env.dynamorio_path, '-client', env.iflinetracer_path, str(process_id), '--']
+# 		cmdlist = ['timeout', str(timeout), env.dynamorio_path, '-client', env.iflinetracer_path,
+# 			str(process_id), '--']
 # 	else:
 # 		cmdlist = [env.dynamorio_path, '-client', env.iflinetracer_path, str(process_id), '--']
 # 	lines = open(cmdFile, 'r').readlines()

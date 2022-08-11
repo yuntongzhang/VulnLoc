@@ -8,24 +8,28 @@ redfat_dir = os.path.join(deps_dir, "RedFat")
 # iflinetracer_path="/opt/fuzzer/deps/iftracer/ifLineTracer/libifLineTracer.so"
 # libcbr_path="/opt/fuzzer/deps/dynamorio/build/api/bin/libcbr.so"
 
-DefaultItems = ['trace_cmd', 'crash_cmd', 'poc', 'poc_fmt', 'folder', 'mutate_range', 'crash_tag', 'bin_path']
+DefaultItems = ['trace_cmd', 'crash_cmd', 'poc', 'poc_fmt',
+                'folder', 'mutate_range', 'crash_tag', 'bin_path']
 OutFolder = ''
 TmpFolder = ''
 TraceFolder = ''
-ConcentratedInputFolder = '' # (YN: added folder for concentrated generated inputs)
-AllInputFolder = '' # (YN: added folder for all generated inputs)
+ConcentratedInputFolder = ''  # (YN: added folder for concentrated generated inputs)
+AllInputFolder = ''  # (YN: added folder for all generated inputs)
 
-SeedPool = [] # Each element is in the fmt of [<process_tag>, <seed_content>]. <process_tag>: True (selected) / False (not selected)
+# Each element is in the fmt of [<process_tag>, <seed_content>].
+#   <process_tag>: True (selected) / False (not selected)
+SeedPool = []
 SeedTraceHashList = []
-ReportCollection = [] # Each element if in the fmt of [<trace_hash>, <tag>]. <tag>: m - malicious / b - benign
+# Each element if in the fmt of [<trace_hash>, <tag>]. <tag>: m - malicious / b - benign
+ReportCollection = []
 TraceHashCollection = []
-GlobalTimeout = 30 * 60 # 30-minute
-LocalTimeout = 30 * 60 # 30-minute
+GlobalTimeout = 30 * 60  # 30-minute
+LocalTimeout = 30 * 60  # 30-minute
 DefaultRandSeed = 3
 DefaultMutateNum = 200
 DefaultMaxCombination = 2
 MaxCombineNum = 10**20
-ConcentratedInputCounter = 0 # (YN: added input counter)
-inputFormat = 'bfile' # or 'text' (YN: added to determine input format)
-AllInputCounter = 0 # (YN: added input counter)
-StoreAllInputs = False # (YN: added flag for generating all inputs)
+ConcentratedInputCounter = 0  # (YN: added input counter)
+inputFormat = 'bfile'  # or 'text' (YN: added to determine input format)
+AllInputCounter = 0  # (YN: added input counter)
+StoreAllInputs = False  # (YN: added flag for generating all inputs)

@@ -14,6 +14,7 @@ from multiprocessing import Pool
 NPZTag = False
 Assem = ''
 
+
 def process_poc_trace(poc_trace_path, bin_path, target_src_str):
     if NPZTag:
         tmp = np.load(poc_trace_path)
@@ -33,6 +34,7 @@ def process_poc_trace(poc_trace_path, bin_path, target_src_str):
         max_id = max(insn_idx_list)
         return poc_trace[:max_id+1]
 
+
 def read_single_trace(folder_path, file_name, file_no):
     if file_no % 100 == 0:
         print('Reading %d_th trace' % file_no)
@@ -48,11 +50,13 @@ def read_single_trace(folder_path, file_name, file_no):
     temp = [trace_hash, unique_insns]
     return temp
 
+
 def init_count_dict(valid_insns):
     count_dict = {}
     for insn in valid_insns:
         count_dict[insn] = 0
     return count_dict
+
 
 def read_all_reports(report_file, trace_folder, process_num):
     file_list = os.listdir(trace_folder)
@@ -62,8 +66,8 @@ def read_all_reports(report_file, trace_folder, process_num):
     for file_no in range(file_num):
         pool.apply_async(
             read_single_trace,
-            args = (trace_folder, file_list[file_no], file_no),
-            callback = trace_collection.append
+            args=(trace_folder, file_list[file_no], file_no),
+            callback=trace_collection.append
         )
     pool.close()
     pool.join()
@@ -82,12 +86,14 @@ def read_all_reports(report_file, trace_folder, process_num):
     print('Finish splitting the reports into two categories!')
     return trace_dict, report_dict
 
+
 def count(report_list, dest_dict, trace_dict):
     target_insn_set = set(dest_dict.keys())
     for trace_hash in report_list:
         intersect_set = set(trace_dict[trace_hash]) & target_insn_set
         for insn in intersect_set:
             dest_dict[insn] += 1
+
 
 def normalize_score(score):
     max_value = np.max(score)
@@ -98,6 +104,7 @@ def normalize_score(score):
     else:
         normalized_score = (score - min_value) / (max_value - min_value)
         return normalized_score
+
 
 def group_scores(scores):
     insn_num = len(scores)
@@ -117,6 +124,7 @@ def group_scores(scores):
                 group_value = scores[insn_no]
     group_info.append(group_list)
     return group_info
+
 
 def calc_scores(valid_insns, tc_num_dict, t_num_dict, malicious_num, output_path):
     tc_num_list = np.asarray([tc_num_dict[insn] for insn in valid_insns], dtype=np.float)
@@ -146,18 +154,22 @@ def calc_scores(valid_insns, tc_num_dict, t_num_dict, malicious_num, output_path
              group_idx=group_info)
     return valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore
 
+
 def count_all(valid_insns, report_dict, trace_dict, output_path):
     malicious_num = len(report_dict['m'])
     benign_num = len(report_dict['b'])
-    logging.info("#reports: %d (#malicious: %d; #benign: %d)" % (malicious_num + benign_num, malicious_num, benign_num))
+    logging.info("#reports: %d (#malicious: %d; #benign: %d)" %
+                 (malicious_num + benign_num, malicious_num, benign_num))
     # initialize all the count info
     tc_num_dict = init_count_dict(valid_insns)
     t_num_dict = init_count_dict(valid_insns)
     # count number(t_i & c)
     count(report_dict['m'], tc_num_dict, trace_dict)
     count(report_dict['m'] + report_dict['b'], t_num_dict, trace_dict)
-    valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore = calc_scores(valid_insns, tc_num_dict, t_num_dict, malicious_num, output_path)
+    valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore = calc_scores(
+        valid_insns, tc_num_dict, t_num_dict, malicious_num, output_path)
     return valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore
+
 
 def rank(poc_trace_path, bin_path, target_src_str, report_file, trace_folder, process_num, npz_path):
     # process the poc trace
@@ -166,8 +178,10 @@ def rank(poc_trace_path, bin_path, target_src_str, report_file, trace_folder, pr
     # read all the important files
     trace_dict, report_dict = read_all_reports(report_file, trace_folder, process_num)
     # count
-    valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore = count_all(unique_insn, report_dict, trace_dict, npz_path)
+    valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore = count_all(
+        unique_insn, report_dict, trace_dict, npz_path)
     return poc_trace, valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore
+
 
 def calc_distance(poc_trace, insns):
     distance_list = []
@@ -176,6 +190,7 @@ def calc_distance(poc_trace, insns):
             np.max(np.where(poc_trace == insn)[0])
         )
     return distance_list
+
 
 def insn2src(bin_path, insn):
     global Assem
@@ -197,7 +212,7 @@ def insn2src(bin_path, insn):
             break
     if target_line_no < 0:
         raise Exception("ERROR: Cannot find the instruction -> %s" % insn)
-    while(target_line_no >= 0):
+    while (target_line_no >= 0):
         line = content[target_line_no]
         tmp = line.split()
         if len(tmp) >= 1 and ':' in tmp[0]:
@@ -213,6 +228,7 @@ def insn2src(bin_path, insn):
     logging.info("Cannot find the source code for instruction -> %s" % insn)
     return "UNKNOWN"
 
+
 def show(bin_path, poc_trace, valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore, show_num):
     group_num = len(group_info)
     show_no = 0
@@ -225,13 +241,15 @@ def show(bin_path, poc_trace, valid_insns, group_info, l2_norm, normalized_nscor
 
         for insn_id in sorted_insn_id_list:
             logging.info("[INSN-%d] %s -> %s (l2norm: %f; normalized(N): %f; normalized(S): %f)" % (
-                show_no, valid_insns[insn_id], insn2src(bin_path, valid_insns[insn_id]), l2_norm[insn_id], normalized_nscore[insn_id], normalized_sscore[insn_id]
+                show_no, valid_insns[insn_id], insn2src(
+                    bin_path, valid_insns[insn_id]), l2_norm[insn_id], normalized_nscore[insn_id], normalized_sscore[insn_id]
             ))
             show_no += 1
             if show_no >= show_num:
                 break
         if show_no >= show_num:
             break
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="PatchLoc")
@@ -249,7 +267,8 @@ def parse_args():
                         help="The source line at the crash location")
     parser.add_argument("--process_num", dest="process_num", type=int, default=10,
                         help="The number of processes")
-    parser.add_argument("--show_num", dest="show_num", type=int, default=10, help="The number of instructions to show")
+    parser.add_argument("--show_num", dest="show_num", type=int, default=10,
+                        help="The number of instructions to show")
     args = parser.parse_args()
 
     config = configparser.ConfigParser()
@@ -299,6 +318,7 @@ def parse_args():
 
     return args.func, args.target_src_str, detailed_config, args.process_num, args.show_num, args.out_folder
 
+
 def init_log(out_folder):
     log_path = os.path.join(out_folder, 'patchloc.log')
     logging.basicConfig(filename=log_path, filemode='a+', level=logging.DEBUG,
@@ -312,16 +332,19 @@ def init_log(out_folder):
     logging.getLogger().addHandler(console)
     logging.info("Output Folder: %s" % out_folder)
 
+
 def controller(tag, target_src_str, config_info, process_num, show_num):
     if tag == 'calc':
         poc_trace, valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore = rank(
             config_info['poc_trace_path'], config_info['bin_path'], target_src_str,
             config_info['report_file'], config_info['trace_folder'], process_num, config_info['npz_path'])
         # get_src_trace(config_info, out_folder)
-        show(config_info['bin_path'], poc_trace, valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore, show_num)
+        show(config_info['bin_path'], poc_trace, valid_insns, group_info,
+             l2_norm, normalized_nscore, normalized_sscore, show_num)
     elif tag == 'show':
         # process the poc trace
-        poc_trace = process_poc_trace(config_info['poc_trace_path'], config_info['bin_path'], target_src_str)
+        poc_trace = process_poc_trace(
+            config_info['poc_trace_path'], config_info['bin_path'], target_src_str)
 
         if not os.path.exists(config_info['npz_path']):
             raise Exception("ERROR: The .npz file does not exist -> %s" % config_info['npz_path'])
@@ -331,6 +354,7 @@ def controller(tag, target_src_str, config_info, process_num, show_num):
              info['normalized_nscore'], info['normalized_sscore'], show_num)
     else:
         raise Exception("ERROR: Function tag does not exist -> %s" % tag)
+
 
 def get_src_trace(detailed_config, out_folder):
     # process the cmd
@@ -352,7 +376,8 @@ def get_src_trace(detailed_config, out_folder):
         os.mkdir(tmp_folder)
     my_parser = parse_dwarf.DwarfParser(bin_path)
     flineNumberDict, fileBoundRangesList, fileBoundIndexList, src_filepath = my_parser.get_main_addr()
-    ifSrcList = tracer.findIfSrcInOrderDyn(bin_path, src_filepath, flineNumberDict, fileBoundRangesList, fileBoundIndexList, cmdFile=cmd_path)
+    ifSrcList = tracer.findIfSrcInOrderDyn(
+        bin_path, src_filepath, flineNumberDict, fileBoundRangesList, fileBoundIndexList, cmdFile=cmd_path)
     logging.info("Got the source trace!")
     # process the source trace
     insn2src = {}
@@ -376,6 +401,7 @@ def get_src_trace(detailed_config, out_folder):
     utils.write_pkl(output_path, info)
     logging.info("Recorded the source trace -> %s" % output_path)
     return insn2src, src2insn
+
 
 if __name__ == '__main__':
     tag, target_src_str, config_info, process_num, show_num, out_folder = parse_args()

@@ -1,7 +1,7 @@
 import itertools
-import numpy as np
 import logging
 import os
+import numpy as np
 
 import values
 import utils
@@ -32,35 +32,33 @@ class SensMap(object):
             'idx': idx_list,
             'tag': np.zeros(len(idx_list)),
             'value': [[] for _ in range(seed_trace_len)]
-	    }
+        }
         self.seed_len = seed_len
         self.max_combination = max_combination
-
 
     def update_maps(self, mutate_idx, diff_collection, crash_collection):
         self.update_loc_map(mutate_idx, diff_collection)
         self.update_crash_map(mutate_idx, crash_collection)
 
-
     def update_loc_map(self, mutate_idx, diff_collection):
         loc_num = len(self.loc_sens_map['value'])
         for diff_id in diff_collection:
             if diff_id < loc_num:
-                logging.debug(f"Update location sensitivity map! loc: {diff_id}; mutate id: {mutate_idx}")
+                logging.debug(
+                    f"Update location sensitivity map! loc: {diff_id}; mutate id: {mutate_idx}")
                 self.loc_sens_map['value'][diff_id].append(mutate_idx)
-
 
     def update_crash_map(self, mutate_idx, crash_collection):
         if len(crash_collection) == 2:
             logging.debug(f"Update crash location sensitivity map! mutate id: {mutate_idx}")
             self.crash_sens_map['value'][mutate_idx] = 1
 
-
     def select_mutate_idx(self):
         # select the non-mutated bytes
         non_mutated_idx = np.where(self.loc_sens_map['tag'] == 0)[0]
         # find out which loc has not been explored
-        unexplore_list = np.where(np.asarray([len(item) for item in self.loc_sens_map['value']]) == 0)[0]
+        unexplore_list = np.where(np.asarray([len(item)
+                                  for item in self.loc_sens_map['value']]) == 0)[0]
         logging.debug(f"#(unexplored loc): {len(unexplore_list)}")
         if len(unexplore_list) == 0:
             return None
@@ -82,7 +80,8 @@ class SensMap(object):
         idx_range = []
         for comb_id in range(1, self.max_combination + 1):
             max_idx = min_idx + len(list(itertools.combinations(range(self.seed_len), comb_id)))
-            idx_range += list(non_mutated_idx[np.where(np.logical_and(non_mutated_idx >= min_idx, non_mutated_idx<max_idx))[0]])
+            idx_range += list(non_mutated_idx[np.where(np.logical_and(
+                non_mutated_idx >= min_idx, non_mutated_idx < max_idx))[0]])
             min_idx = max_idx
             if len(idx_range) > 0:
                 logging.debug(f"Select the mutation idx from {comb_id}-combination")
@@ -90,21 +89,17 @@ class SensMap(object):
                 return idx_range[0]
         return None
 
-
     def mark_mutate_idx(self, mutate_idx):
         self.loc_sens_map['tag'][mutate_idx] = 1
 
     def retrieve_mutate_idx(self, mutate_idx):
         return self.loc_sens_map['idx'][mutate_idx]
 
-
     def loc_map(self):
         return self.loc_sens_map
 
-
     def crash_map(self):
         return self.crash_sens_map
-
 
     def save_maps_to_disk(self, seed_trace_hash):
         # processing the local sensitivity (for saving the hard disk)
@@ -119,7 +114,7 @@ class SensMap(object):
         loc_idxes = []
         loc_num = len(self.loc_sens_map['value'])
         for loc_id in range(loc_num):
-            tmp = np.where(self.loc_sens_map['value'][loc_id]>0)[0]
+            tmp = np.where(self.loc_sens_map['value'][loc_id] > 0)[0]
             if len(tmp) > 0:
                 loc_idxes.append(loc_id)
                 loc_sens.append(tmp)

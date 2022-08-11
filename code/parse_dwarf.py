@@ -1,49 +1,53 @@
-from elftools.elf.elffile import ELFFile
 import subprocess
 import operator
 import string
 import logging
-import utils
 import os
+
+from elftools.elf.elffile import ELFFile
+
+import utils
+
 
 def find_end_curly_bracket(file_path, start_line, end_line):
     content = utils.read_txt(file_path)
     current_line = end_line - 1
     start_line = start_line - 1
     tag = False
-    while(current_line >= start_line):
+    while current_line >= start_line:
         if len(content[current_line]) > 0 and content[current_line][0] == '}':
             tag = True
             break
         current_line = current_line - 1
     if tag:
         return current_line + 1
-    raise Exception("ERROR: Cannot find the last curly bracket within [%d, %d]" % (start_line, end_line))
+    raise Exception(f"ERROR: Cannot find the last curly bracket within [{start_line}, {end_line}]")
 
 # A function to do the readelf part which gives me linenumer :: address for each file
+
+
 def readELF(filepath, flineNumberDict, mainLine, srcfilepath):
     filename = srcfilepath.split('/')[-1]
 
-    p1 = subprocess.Popen(['readelf', '-wL', filepath], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = p1.communicate()
+    p1 = subprocess.Popen(['readelf', '-wL', filepath],
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, _ = p1.communicate()
     outlist = out.split('File name')
     mainAddrList = []
-    '''Lists that maintain the file starting and ending boundaries'''
+    # Lists that maintain the file starting and ending boundaries
     fileBoundRangesDict = {}
     fileBoundRangesList = []
     fileBoundIndexList = []
     found = False
 
-    ''' Get all the filenames'''
+    # Get all the filenames
     for out in outlist:
         out = 'File name' + out
         paragraphs = out.split('\n\n')
 
-        firstFound = False
         first = -1
 
         for paragraph in paragraphs:
-            start = 0
             paragraph += '\n'
 
             lines = paragraph.split('\n')
@@ -54,19 +58,19 @@ def readELF(filepath, flineNumberDict, mainLine, srcfilepath):
                     continue
                 if a[2][0:2] == '0x':
                     # print(a[0])
-                    if not (a[0] in fileBoundRangesDict):
+                    if not a[0] in fileBoundRangesDict:
                         # if not firstFound:
                         first = a[2]
-                        firstFound = True
                         pfilename = a[0]
                         fileBoundRangesDict[pfilename] = int(first, 16)
 
-                    if not (a[0] in flineNumberDict):
+                    if not a[0] in flineNumberDict:
                         flineNumberDict[a[0]] = {}
 
                     flineNumberDict[a[0]][a[2]] = a[1]
 
-                    ''' Assuming that the main function is present in the file correspnding to source executable '''
+                    # Assuming that the main function is present in the file correspnding
+                    # to source executable
                     if a[1] == str(mainLine) and (a[0] == filename):
                         mainAddrList.append(a[2])
                         found = True
@@ -79,6 +83,7 @@ def readELF(filepath, flineNumberDict, mainLine, srcfilepath):
     if found:
         return mainAddrList[0], fileBoundRangesList, fileBoundIndexList
     return None, fileBoundRangesList, fileBoundIndexList
+
 
 def get_var_size(die_dict, type_die_idx):
     type_die = die_dict[type_die_idx]
@@ -93,7 +98,7 @@ def get_var_size(die_dict, type_die_idx):
             if sub_die.tag == 'DW_TAG_subrange_type' and 'DW_AT_upper_bound' in sub_die.attributes:
                 element_num = sub_die.attributes['DW_AT_upper_bound'].value
         if element_num < 0:
-            raise Exception("ERROR: Cannot find the #elements in the array!\n%s" % type_die.__str__())
+            raise Exception(f"ERROR: Cannot find the #elements in the array!\n{type_die.__str__()}")
         return ['array', tmp[1]*element_num]
     elif type_die.tag == 'DW_TAG_pointer_type':
         new_type_die_idx = type_die.cu.cu_offset + type_die.attributes['DW_AT_type'].value
@@ -103,7 +108,8 @@ def get_var_size(die_dict, type_die_idx):
         else:
             return ['*', tmp[1]]
     elif type_die.tag == 'DW_TAG_structure_type':
-        if 'DW_AT_declaration' in type_die.attributes and type_die.attributes['DW_AT_declaration'].value:
+        if ('DW_AT_declaration' in type_die.attributes
+                and type_die.attributes['DW_AT_declaration'].value):
             return ['struct', -1]
         else:
             return ['struct', type_die.attributes['DW_AT_byte_size'].value]
@@ -111,14 +117,15 @@ def get_var_size(die_dict, type_die_idx):
         new_type_die_idx = type_die.cu.cu_offset + type_die.attributes['DW_AT_type'].value
         return get_var_size(die_dict, new_type_die_idx)
     else:
-        raise Exception("ERROR: Unknown type! -> %s" % type_die)
+        raise Exception(f"ERROR: Unknown type! -> {type_die}")
+
 
 class DwarfParser():
     def __init__(self, bin_path):
         with open(bin_path, 'rb') as f:
             elffile = ELFFile(f)
             self.dwarfinfo = elffile.get_dwarf_info()
-        logging.debug("Read dwarf info from file -> %s" % bin_path)
+        logging.debug(f"Read dwarf info from file -> {bin_path}")
         self.bin_path = bin_path
 
     def bin2func(self, target_addr):
@@ -129,13 +136,14 @@ class DwarfParser():
                 cu_min_addr = top_die.attributes['DW_AT_low_pc'].value
                 cu_max_addr = cu_min_addr + top_die.attributes['DW_AT_high_pc'].value
             except:
-                logging.debug("Warning: Cannot find the DW_AT_low_pc & DW_AT_high_pc attributes!\n" + top_die.__str__())
+                logging.debug(f"Warning: Cannot find the DW_AT_low_pc & DW_AT_high_pc attributes!"
+                    f"\n{top_die.__str__()}")
             else:
                 if target_addr >= cu_min_addr and target_addr < cu_max_addr:
                     target_cu = CU
                     break
-        if target_cu == None:
-            raise Exception("ERROR: Cannot find the CU containing the target addr -> %s" % target_addr)
+        if target_cu is None:
+            raise Exception(f"ERROR: Cannot find the CU containing target addr -> {target_addr}")
 
         target_die = None
         next_die = None
@@ -145,28 +153,31 @@ class DwarfParser():
                     die_min_addr = die.attributes['DW_AT_low_pc'].value
                     die_max_addr = die_min_addr + die.attributes['DW_AT_high_pc'].value
                 except:
-                    logging.debug("Warning: Cannot find the DW_AT_low_pc & DW_AT_high_pc attributes!\n" + die.__str__())
+                    logging.debug(f"Warning: Cannot find the DW_AT_low_pc & "
+                        f"DW_AT_high_pc attributes!\n{die.__str__()}")
                 else:
-                    if target_die != None:
+                    if target_die is not None:
                         next_die = die
                         break
                     if target_addr >= die_min_addr and target_addr < die_max_addr:
                         target_die = die
-        if target_die == None:
-            raise Exception("ERROR: Cannot find the function containing the target addr -> %s" % target_addr)
+        if target_die is None:
+            raise Exception(
+                f"ERROR: Cannot find the function containing the target addr -> {target_addr}")
         file_dir = target_die.cu.get_top_DIE().attributes['DW_AT_comp_dir'].value
         file_name = target_die.cu.get_top_DIE().attributes['DW_AT_name'].value
         file_path = os.path.join(file_dir, file_name)
         func_name = target_die.attributes['DW_AT_name'].value
         func_decl_line = target_die.attributes['DW_AT_decl_line'].value
-        logging.info("The address <%d> can be found below:\nfile: %s\nfunc name: %s\nfunc decl line: %s" % (
-        target_addr, file_path, func_name, func_decl_line))
-        if next_die == None:
-            raise Exception("ERROR: Cannot find the next function after function <%s>" % func_name)
+        logging.info(f"The address <{target_addr}> can be found below:\nfile: {file_path}\n"
+            f"func name: {func_name}\nfunc decl line: {func_decl_line}")
+        if next_die is None:
+            raise Exception(f"ERROR: Cannot find the next function after function <{func_name}>")
         next_func_decl_line = next_die.attributes['DW_AT_decl_line'].value
-        logging.info('The starting line of the function after <%s>: %d' % (func_name, next_func_decl_line))
-        last_curly_bracket_line = find_end_curly_bracket(file_path, func_decl_line, next_func_decl_line)
-        logging.info('The ending line of function <%s>: %d' % (func_name, last_curly_bracket_line))
+        logging.info(f'The starting line of function after <{func_name}>: {next_func_decl_line}')
+        last_curly_bracket_line = find_end_curly_bracket(
+            file_path, func_decl_line, next_func_decl_line)
+        logging.info(f'The ending line of function <{func_name}>: {last_curly_bracket_line}')
 
         return file_path, func_name, func_decl_line, last_curly_bracket_line, target_die
 
@@ -174,11 +185,13 @@ class DwarfParser():
         func_src_bounds = {}
         for CU in self.dwarfinfo.iter_CUs():
             top_die = CU.get_top_DIE()
-            filepath = os.path.join(top_die.attributes['DW_AT_comp_dir'].value, top_die.attributes['DW_AT_name'].value)
+            filepath = os.path.join(
+                top_die.attributes['DW_AT_comp_dir'].value, top_die.attributes['DW_AT_name'].value)
             func_src_bounds[filepath] = {}
             for DIE in CU.iter_DIEs():
                 if DIE.tag == "DW_TAG_subprogram":
-                    if "DW_AT_name" not in DIE.attributes or "DW_AT_decl_line" not in DIE.attributes:
+                    if ("DW_AT_name" not in DIE.attributes
+                            or "DW_AT_decl_line" not in DIE.attributes):
                         continue
                     func_name = DIE.attributes["DW_AT_name"].value
                     src_line = DIE.attributes["DW_AT_decl_line"].value
@@ -190,19 +203,20 @@ class DwarfParser():
         main_tag = 0
         src_filepath = ''
         main_line = -1
-        for filepath in func_bounds:
-            for func_name in func_bounds[filepath]:
+        for filepath, name_to_line in func_bounds.items():
+            for func_name, line in name_to_line.items():
                 if func_name == 'main':
                     main_tag += 1
                     src_filepath = filepath
-                    main_line = func_bounds[filepath]['main']
+                    main_line = line
         if main_tag != 1:
-            raise Exception("ERROR: There are %d main functions." % main_tag)
-        logging.info("Here is the main function in the source -> %s: %d" % (src_filepath, main_line))
+            raise Exception(f"ERROR: There are {main_tag} main functions.")
+        logging.info(f"Here is the main function in the source -> {src_filepath}: {main_line}")
 
         flineNumberDict = {}
-        main_addr, fileBoundRangesList, fileBoundIndexList = readELF(self.bin_path, flineNumberDict, main_line, src_filepath)
-        logging.info("Here is the main address in binary -> %s" % main_addr)
+        main_addr, fileBoundRangesList, fileBoundIndexList = readELF(
+            self.bin_path, flineNumberDict, main_line, src_filepath)
+        logging.info(f"Here is the main address in binary -> {main_addr}")
         return flineNumberDict, fileBoundRangesList, fileBoundIndexList, src_filepath
 
     def get_all_dies(self):
@@ -218,7 +232,9 @@ class DwarfParser():
         CU = func_die.cu
         for die in CU.iter_DIEs():
             if die.tag == 'DW_TAG_variable' and die.get_parent().tag == 'DW_TAG_compile_unit':
-                if 'DW_AT_location' in die.attributes and len(die.attributes['DW_AT_location'].value) > 0 and die.attributes['DW_AT_location'].value[0] == 3:
+                if ('DW_AT_location' in die.attributes
+                        and len(die.attributes['DW_AT_location'].value) > 0
+                        and die.attributes['DW_AT_location'].value[0] == 3):
                     global_dies.append(die)
         # get all local variables
         die_info = {'var_dies': [], 'arg_dies': [], 'block_dies': []}
@@ -251,18 +267,12 @@ class DwarfParser():
             live_vars_info['args'].append(
                 self.parse_var(die_dict, die)
             )
-        for block_offset in block_var_dies:
-            for die in block_var_dies[block_offset]:
-                live_vars_info['lvars'].append(
-                    self.parse_var(die_dict, die)
-                )
+        for _, dies in block_var_dies.items():
+            for die in dies:
+                live_vars_info['lvars'].append(self.parse_var(die_dict, die))
         for die in global_dies:
-            live_vars_info['gvars'].append(
-                self.parse_var(die_dict, die)
-            )
+            live_vars_info['gvars'].append(self.parse_var(die_dict, die))
         return live_vars_info
-
-
 
     def parse_var(self, die_dict, die):
         var_name = die.attributes['DW_AT_name'].value
@@ -275,19 +285,22 @@ class DwarfParser():
 
     # def extract_func_live_vars(self):
 
+
 def get_source_line(bin_path, target_addr_str):
     target_value = int(target_addr_str, 16)
     end_value = target_value + 1
     end_str = hex(end_value)
-    cmd_list = ['objdump', '-S', '-l', '--start-address=%s' % target_addr_str, '--stop-address=%s' % end_str, bin_path]
+    cmd_list = ['objdump', '-S', '-l', f"--start-address={target_addr_str}",
+        f"--stop-address={end_str}", bin_path]
     p1 = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = p1.communicate()
+    out, _ = p1.communicate()
     content = out.split('\n')
     # process target_addr_str
-    for id in range(len(target_addr_str)):
-        if target_addr_str[id] not in ['0', 'x']:
+    tag = None
+    for idx, value in enumerate(target_addr_str):
+        if value not in ['0', 'x']:
+            tag = target_addr_str[idx:]
             break
-    tag = target_addr_str[id:]
     line_num = len(content)
     for line_no in range(line_num):
         if tag in content[line_no]:
@@ -295,10 +308,11 @@ def get_source_line(bin_path, target_addr_str):
                 return content[line_no+2]
     return None
 
+
 def get_bin_line(bin_path, target_src_str):
     cmd_list = ['objdump', '-S', '-l', bin_path]
     p1 = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = p1.communicate()
+    out, _ = p1.communicate()
     content = out.split('\n')
     # process target_src_str
     src_file = '-'.join(target_src_str.split('-')[:-1])
@@ -310,7 +324,7 @@ def get_bin_line(bin_path, target_src_str):
         if tag in content[line_no]:
             start_line_no_list.append(line_no)
     if len(start_line_no_list) == 0:
-        raise Exception("Cannot find the target src line -> %s" % target_src_str)
+        raise Exception(f"Cannot find the target src line -> {target_src_str}")
     addr_collection = []
     for start_line_no in start_line_no_list:
         tag = False
@@ -329,12 +343,12 @@ def get_bin_line(bin_path, target_src_str):
                     if tmp2 not in string.hexdigits:
                         addr_tag = False
                         break
-                if addr_tag and tag == False:
+                if addr_tag and tag is False:
                     tag = True
                     addr_list.append('0x' + '0'*(16-len(tmp)) + tmp)
                 elif addr_tag and tag:
                     addr_list.append('0x' + '0'*(16-len(tmp)) + tmp)
-                elif addr_tag == False and tag:
+                elif addr_tag is False and tag:
                     break
                 else:
                     continue
@@ -343,5 +357,3 @@ def get_bin_line(bin_path, target_src_str):
                     break
         addr_collection += addr_list
     return addr_collection
-
-
