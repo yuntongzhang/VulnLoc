@@ -6,7 +6,7 @@ import os
 import string
 import logging
 import subprocess
-import ConfigParser
+import configparser
 import tracer
 from copy import deepcopy as dc
 from multiprocessing import Pool
@@ -252,7 +252,7 @@ def parse_args():
     parser.add_argument("--show_num", dest="show_num", type=int, default=10, help="The number of instructions to show")
     args = parser.parse_args()
 
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(args.config_file)
     if args.tag not in config.sections():
         raise Exception("ERROR: Please provide the configuration file for %s" % args.tag)

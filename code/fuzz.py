@@ -1,5 +1,5 @@
 import argparse
-import ConfigParser
+import configparser
 import logging
 import os
 import numpy as np
@@ -30,7 +30,7 @@ def parse_args():
 	args = parser.parse_args()
 
 	# check the validity of args
-	config = ConfigParser.ConfigParser()
+	config = configparser.ConfigParser()
 	config.read(args.config_file)
 	if args.tag not in config.sections():
 		raise Exception(f"ERROR: Please provide the configuration file for {args.tag}")
