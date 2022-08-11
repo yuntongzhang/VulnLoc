@@ -6,7 +6,6 @@ import numpy as np
 from time import time
 import string
 import shutil
-import itertools
 import json
 from multiprocessing import Pool
 
@@ -247,7 +246,7 @@ def real_concfuzz_loop(config_info, poc_trace, seed_len):
 		else:
 			selected_seed_trace = np.load(trace_path)
 			# selected_seed_trace = utils.read_pkl(trace_path)
-		logging.info(f'len(Seed Trace): {selected_seed_trace}')
+		logging.info(f'len(Seed Trace): {len(selected_seed_trace)}')
 
 		# initialize sensitivity map
 		# crash_sensitivity_map, loc_sensitivity_map = init_sensitivity_map(seed_len, len(selected_seed_trace), config_info['#combination'])

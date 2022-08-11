@@ -77,6 +77,6 @@ def gen_report(input_no, raw_args, poc_fmt, trace_cmd, trace_replace_idx, crash_
 	trace_hash = tracer.calc_trace_hash(trace)
     # (2) check against oracle
 	crash_cmd = prepare_cmd(crash_cmd, crash_replace_idx, processed_args)
-	_, err = oracle.exec_bin(crash_cmd)
+	_, err = oracle.exec_bin(crash_cmd, bin_path)
 	crash_result = oracle.check_exploit(err, crash_info)
 	return (input_no, trace, trace_hash, crash_result, trace_diff_id)

@@ -11,7 +11,7 @@ def rewrite_binary_with_oracle(bin):
     """
     oracle_bin = bin + ".redfat"
     redfat_bin = os.path.join(values.redfat_dir, "redfat")
-    patch_cmd = [ redfat_bin, "-Xreads=true", "-Xlowfat=false", bin ]
+    patch_cmd = [ redfat_bin, "-Xreads=true", "-Xlowfat=false", "-o" , oracle_bin, bin ]
     p = subprocess.Popen(patch_cmd)
     p.communicate()
     if not os.path.isfile(oracle_bin):
@@ -27,7 +27,7 @@ def exec_bin(cmd_list, bin):
     redfat_lib_path = os.path.join(values.redfat_dir, "install", "libredfat.so")
     redfat_env = { "LD_PRELOAD" : redfat_lib_path }
     modified_env = { **os.environ, **redfat_env }
-    p = subprocess.Popen(cmd_list, env=modified_env,
+    p = subprocess.Popen(cmd_list, env=modified_env, encoding='utf-8', errors='replace',
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
     return out, err

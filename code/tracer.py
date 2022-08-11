@@ -13,8 +13,7 @@ def rewrite_trace_binary(bin):
 	trace_bin = bin + ".trace"
 	curr_dir = os.getcwd()
 	os.chdir(values.e9patch_dir)
-	patch_cmd = ['./e9tool', '-M', 'condjump', '-P', 'entry(addr)@printaddr',
-		'-o', trace_bin, bin]
+	patch_cmd = ['./e9tool', '-M', 'condjump', '-P', 'entry(addr)@printaddr', '-o', trace_bin, bin]
 	p = subprocess.Popen(patch_cmd)
 	p.communicate()
 	if not os.path.isfile(trace_bin):
@@ -25,7 +24,7 @@ def rewrite_trace_binary(bin):
 def exec_bin(cmd_list, bin):
 	trace_bin = bin + ".trace"
 	cmd_list = [ trace_bin if s == bin else s for s in cmd_list ]
-	p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
 	_, err = p.communicate()
 	# parse output (stderr)
 	if_list = []
@@ -37,7 +36,7 @@ def exec_bin(cmd_list, bin):
 
 def calc_trace_hash(trace):
 	trace_str = '\n'.join(trace)
-	return hashlib.sha256(trace_str).hexdigest()
+	return hashlib.sha256(trace_str.encode('utf-8')).hexdigest()
 
 
 def trace_cmp(seed_trace, trace):
