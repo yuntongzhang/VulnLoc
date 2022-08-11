@@ -24,7 +24,7 @@ def rewrite_trace_binary(bin):
 def exec_bin(cmd_list, bin):
 	trace_bin = bin + ".trace"
 	cmd_list = [ trace_bin if s == bin else s for s in cmd_list ]
-	p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+	p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8', errors='replace')
 	_, err = p.communicate()
 	# parse output (stderr)
 	if_list = []
