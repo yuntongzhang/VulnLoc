@@ -1,22 +1,19 @@
-import parse_dwarf
-import numpy as np
-import utils
 import argparse
 import os
 import string
 import logging
 import subprocess
 import configparser
-import tracer
-from copy import deepcopy as dc
 from multiprocessing import Pool
 
-NPZTag = False
-Assem = ''
+import numpy as np
+import parse_dwarf
+
+import utils
 
 
-def process_poc_trace(poc_trace_path, bin_path, target_src_str):
-    if NPZTag:
+def process_poc_trace(poc_trace_path, bin_path, target_src_str, load_from_npz):
+    if load_from_npz:
         tmp = np.load(poc_trace_path)
         poc_trace = tmp['trace']
     else:
@@ -30,16 +27,16 @@ def process_poc_trace(poc_trace_path, bin_path, target_src_str):
         for insn in insn_list:
             insn_idx_list += list(np.where(poc_trace == insn)[0])
         if len(insn_idx_list) == 0:
-            raise Exception("ERROR: Cannot find the instructions for source -> %s" % target_src_str)
+            raise Exception(f"ERROR: Cannot find the instructions for source -> {target_src_str}")
         max_id = max(insn_idx_list)
         return poc_trace[:max_id+1]
 
 
-def read_single_trace(folder_path, file_name, file_no):
+def read_single_trace(folder_path, file_name, file_no, load_from_npz):
     if file_no % 100 == 0:
-        print('Reading %d_th trace' % file_no)
+        print(f'Reading {file_no}_th trace')
     file_path = os.path.join(folder_path, file_name)
-    if NPZTag:
+    if load_from_npz:
         tmp = np.load(file_path)
         content = tmp['trace']
         trace_hash = file_name.split('.')[0]
@@ -58,7 +55,7 @@ def init_count_dict(valid_insns):
     return count_dict
 
 
-def read_all_reports(report_file, trace_folder, process_num):
+def read_all_reports(report_file, trace_folder, process_num, load_from_npz):
     file_list = os.listdir(trace_folder)
     file_num = len(file_list)
     trace_collection = []
@@ -66,7 +63,7 @@ def read_all_reports(report_file, trace_folder, process_num):
     for file_no in range(file_num):
         pool.apply_async(
             read_single_trace,
-            args=(trace_folder, file_list[file_no], file_no),
+            args=(trace_folder, file_list[file_no], file_no, load_from_npz),
             callback=trace_collection.append
         )
     pool.close()
@@ -149,17 +146,18 @@ def calc_scores(valid_insns, tc_num_dict, t_num_dict, malicious_num, output_path
     # group the insns according to its score
     group_info = group_scores(l2_norm)
     np.savez(output_path,
-             insns=valid_insns, tc_num=tc_num_list, t_num=t_num_list, nscore=n_score, sscore=s_score,
-             normalized_nscore=normalized_nscore, normalized_sscore=normalized_sscore, l2_norm=l2_norm,
-             group_idx=group_info)
+             insns=valid_insns, tc_num=tc_num_list, t_num=t_num_list,
+             nscore=n_score, sscore=s_score,
+             normalized_nscore=normalized_nscore, normalized_sscore=normalized_sscore,
+             l2_norm=l2_norm, group_idx=group_info)
     return valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore
 
 
 def count_all(valid_insns, report_dict, trace_dict, output_path):
     malicious_num = len(report_dict['m'])
     benign_num = len(report_dict['b'])
-    logging.info("#reports: %d (#malicious: %d; #benign: %d)" %
-                 (malicious_num + benign_num, malicious_num, benign_num))
+    logging.info(f"#reports: {malicious_num + benign_num} "
+        f"(#malicious: {malicious_num}; #benign: {benign_num})")
     # initialize all the count info
     tc_num_dict = init_count_dict(valid_insns)
     t_num_dict = init_count_dict(valid_insns)
@@ -171,12 +169,14 @@ def count_all(valid_insns, report_dict, trace_dict, output_path):
     return valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore
 
 
-def rank(poc_trace_path, bin_path, target_src_str, report_file, trace_folder, process_num, npz_path):
+def rank(poc_trace_path, bin_path, target_src_str, report_file, trace_folder,
+        process_num, npz_path, load_from_npz):
     # process the poc trace
-    poc_trace = process_poc_trace(poc_trace_path, bin_path, target_src_str)
+    poc_trace = process_poc_trace(poc_trace_path, bin_path, target_src_str, load_from_npz)
     unique_insn = np.unique(poc_trace)
     # read all the important files
-    trace_dict, report_dict = read_all_reports(report_file, trace_folder, process_num)
+    trace_dict, report_dict = read_all_reports(report_file, trace_folder,
+        process_num, load_from_npz)
     # count
     valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore = count_all(
         unique_insn, report_dict, trace_dict, npz_path)
@@ -192,28 +192,27 @@ def calc_distance(poc_trace, insns):
     return distance_list
 
 
-def insn2src(bin_path, insn):
-    global Assem
-    if len(Assem) == 0:
-        cmd_list = ['objdump', '-S', '-l', bin_path]
-        p1 = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err = p1.communicate()
-        content = out.split('\n')
-        Assem = content
-    else:
-        content = Assem
-    line_num = len(content)
+def bin_to_asm(bin_path):
+    cmd_list = ['objdump', '-S', '-l', bin_path]
+    p1 = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, _ = p1.communicate()
+    content = out.split('\n')
+    return content
+
+
+def insn_to_src(assembly, insn):
+    line_num = len(assembly)
     target_insn = insn[-6:] + ':'
     target_line_no = -1
     for line_no in range(line_num):
-        line = content[line_no].split()
+        line = assembly[line_no].split()
         if len(line) > 0 and line[0] == target_insn:
             target_line_no = line_no
             break
     if target_line_no < 0:
-        raise Exception("ERROR: Cannot find the instruction -> %s" % insn)
-    while (target_line_no >= 0):
-        line = content[target_line_no]
+        raise Exception(f"ERROR: Cannot find the instruction -> {insn}")
+    while target_line_no >= 0:
+        line = assembly[target_line_no]
         tmp = line.split()
         if len(tmp) >= 1 and ':' in tmp[0]:
             tmp2 = tmp[0].split(':')
@@ -225,11 +224,12 @@ def insn2src(bin_path, insn):
             if os.path.exists(tmp2[0]) and tag:
                 return tmp[0].split('/')[-1]
         target_line_no = target_line_no - 1
-    logging.info("Cannot find the source code for instruction -> %s" % insn)
+    logging.info(f"Cannot find the source code for instruction -> {insn}")
     return "UNKNOWN"
 
 
-def show(bin_path, poc_trace, valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore, show_num):
+def show(assembly, poc_trace, valid_insns, group_info, l2_norm, normalized_nscore,
+        normalized_sscore, show_num):
     group_num = len(group_info)
     show_no = 0
     for group_no in range(group_num):
@@ -240,10 +240,10 @@ def show(bin_path, poc_trace, valid_insns, group_info, l2_norm, normalized_nscor
         sorted_insn_id_list = insn_id_list[sorted_idx_list]
 
         for insn_id in sorted_insn_id_list:
-            logging.info("[INSN-%d] %s -> %s (l2norm: %f; normalized(N): %f; normalized(S): %f)" % (
-                show_no, valid_insns[insn_id], insn2src(
-                    bin_path, valid_insns[insn_id]), l2_norm[insn_id], normalized_nscore[insn_id], normalized_sscore[insn_id]
-            ))
+            logging.info(f"[INSN-{show_no}] {valid_insns[insn_id]} ->"
+                f"{insn_to_src(assembly, valid_insns[insn_id])} "
+                f"(l2norm: {l2_norm[insn_id]}; normalized(N): {normalized_nscore[insn_id]};"
+                f"normalized(S): {normalized_sscore[insn_id]})")
             show_no += 1
             if show_no >= show_num:
                 break
@@ -274,13 +274,13 @@ def parse_args():
     config = configparser.ConfigParser()
     config.read(args.config_file)
     if args.tag not in config.sections():
-        raise Exception("ERROR: Please provide the configuration file for %s" % args.tag)
+        raise Exception(f"ERROR: Please provide the configuration file for {args.tag}")
 
     detailed_config = {}
     for item in config.items(args.tag):
         if item[0] == 'folder':
             if not os.path.exists(item[1]):
-                raise Exception("ERROR: The folder does not exist -> %s" % item[1])
+                raise Exception(f"ERROR: The folder does not exist -> {item[1]}")
             detailed_config[item[0]] = item[1]
         else:
             detailed_config[item[0]] = item[1].split(';')
@@ -288,35 +288,36 @@ def parse_args():
     if 'bin_path' in detailed_config:
         bin_path = detailed_config['bin_path'][0]
         if not os.path.exists(bin_path):
-            raise Exception("ERROR: Binary file does not exist -> %s" % bin_path)
+            raise Exception(f"ERROR: Binary file does not exist -> {bin_path}")
         detailed_config['bin_path'] = bin_path
     else:
         raise Exception("ERROR: Please specify the binary file in config.ini")
 
     trace_folder = os.path.join(args.out_folder, 'traces')
     if not os.path.exists(trace_folder):
-        raise Exception("ERROR: Unknown folder -> %s" % trace_folder)
+        raise Exception(f"ERROR: Unknown folder -> {trace_folder}")
     detailed_config['trace_folder'] = trace_folder
 
     poc_trace_path = os.path.join(trace_folder, args.poc_trace_hash)
     if not os.path.exists(poc_trace_path):
         poc_trace_path = poc_trace_path + '.npz'
+        detailed_config['load_from_npz'] = False
         if not os.path.exists(poc_trace_path):
-            raise Exception("ERROR: Unknown file path -> %s" % poc_trace_path)
+            raise Exception(f"ERROR: Unknown file path -> {poc_trace_path}")
         else:
-            global NPZTag
-            NPZTag = True
+            detailed_config['load_from_npz'] = True
     detailed_config['poc_trace_path'] = poc_trace_path
 
     report_file = os.path.join(args.out_folder, 'reports.pkl')
     if not os.path.exists(report_file):
-        raise Exception("ERROR: Unknown file path -> %s" % report_file)
+        raise Exception(f"ERROR: Unknown file path -> {report_file}")
     detailed_config['report_file'] = report_file
 
     npz_path = os.path.join(args.out_folder, 'var_ranking.npz')
     detailed_config['npz_path'] = npz_path
 
-    return args.func, args.target_src_str, detailed_config, args.process_num, args.show_num, args.out_folder
+    return (args.func, args.target_src_str, detailed_config, args.process_num,
+            args.show_num, args.out_folder)
 
 
 def init_log(out_folder):
@@ -330,80 +331,42 @@ def init_log(out_folder):
                                     datefmt="%d-%b-%y %H:%M:%S")
     console.setFormatter(console_fmt)
     logging.getLogger().addHandler(console)
-    logging.info("Output Folder: %s" % out_folder)
+    logging.info(f"Output Folder: {out_folder}")
 
 
 def controller(tag, target_src_str, config_info, process_num, show_num):
+    asm = bin_to_asm(config_info['bin_path'])
+
     if tag == 'calc':
         poc_trace, valid_insns, group_info, l2_norm, normalized_nscore, normalized_sscore = rank(
             config_info['poc_trace_path'], config_info['bin_path'], target_src_str,
-            config_info['report_file'], config_info['trace_folder'], process_num, config_info['npz_path'])
-        # get_src_trace(config_info, out_folder)
-        show(config_info['bin_path'], poc_trace, valid_insns, group_info,
+            config_info['report_file'], config_info['trace_folder'], process_num,
+            config_info['npz_path'], config_info['load_from_npz'])
+
+        show(asm, poc_trace, valid_insns, group_info,
              l2_norm, normalized_nscore, normalized_sscore, show_num)
+
     elif tag == 'show':
         # process the poc trace
-        poc_trace = process_poc_trace(
-            config_info['poc_trace_path'], config_info['bin_path'], target_src_str)
+        poc_trace = process_poc_trace(config_info['poc_trace_path'], config_info['bin_path'],
+            target_src_str, config_info['load_from_npz'])
 
         if not os.path.exists(config_info['npz_path']):
-            raise Exception("ERROR: The .npz file does not exist -> %s" % config_info['npz_path'])
+            raise Exception(f"ERROR: The .npz file does not exist -> {config_info['npz_path']}")
         info = np.load(config_info['npz_path'], allow_pickle=True)
 
-        show(config_info['bin_path'], poc_trace, info['insns'], info['group_idx'], info['l2_norm'],
+        show(asm, poc_trace, info['insns'], info['group_idx'], info['l2_norm'],
              info['normalized_nscore'], info['normalized_sscore'], show_num)
+
     else:
-        raise Exception("ERROR: Function tag does not exist -> %s" % tag)
+        raise Exception(f"ERROR: Function tag does not exist -> {tag}")
 
 
-def get_src_trace(detailed_config, out_folder):
-    # process the cmd
-    trace_cmd = detailed_config['trace_cmd']
-    poc = detailed_config['poc']
-    replace_idx = np.where(np.asarray(trace_cmd) == '***')[0]
-    cmd = dc(trace_cmd)
-    replace_num = len(replace_idx)
-    for id in range(replace_num):
-        cmd[replace_idx[id]] = poc[id]
-    # write the cmd
-    cmd_path = os.path.join(out_folder, 'cmd.txt')
-    utils.write_txt(cmd_path, [' '.join(cmd)])
-    # get binary path
-    bin_path = detailed_config['bin_path']
-    # get the source trace
-    tmp_folder = './tempDr'
-    if not os.path.exists(tmp_folder):
-        os.mkdir(tmp_folder)
-    my_parser = parse_dwarf.DwarfParser(bin_path)
-    flineNumberDict, fileBoundRangesList, fileBoundIndexList, src_filepath = my_parser.get_main_addr()
-    ifSrcList = tracer.findIfSrcInOrderDyn(
-        bin_path, src_filepath, flineNumberDict, fileBoundRangesList, fileBoundIndexList, cmdFile=cmd_path)
-    logging.info("Got the source trace!")
-    # process the source trace
-    insn2src = {}
-    src2insn = {}
-    for item in ifSrcList:
-        insn = item[0]
-        src = '-'.join(item[1:3])
-        if insn not in insn2src:
-            insn2src[insn] = src
-        if src in src2insn:
-            src2insn[src].add(insn)
-        else:
-            src2insn[src] = {insn}
-    info = {
-        'raw': ifSrcList,
-        'insn2src': insn2src,
-        'src2insn': src2insn
-    }
-    # write the source trace
-    output_path = os.path.join(out_folder, 'poc_source_trace.pkl')
-    utils.write_pkl(output_path, info)
-    logging.info("Recorded the source trace -> %s" % output_path)
-    return insn2src, src2insn
-
-
-if __name__ == '__main__':
+def main():
     tag, target_src_str, config_info, process_num, show_num, out_folder = parse_args()
     init_log(out_folder)
     controller(tag, target_src_str, config_info, process_num, show_num)
+
+
+if __name__ == '__main__':
+    main()
