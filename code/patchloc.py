@@ -260,7 +260,7 @@ def parse_args():
                         help="The cve tag")
     parser.add_argument("--func", dest="func", type=str, required=True,
                         help="The function for execution (calc/show)")
-    parser.add_argument("--out", dest="out_folder", type=str, required=True,
+    parser.add_argument("--out", dest="out", type=str, required=True,
                         help="The path of output folder which is named according to the timestamp")
     parser.add_argument("--poc_trace_hash", dest="poc_trace_hash", type=str, required=True,
                         help="The hash of executing trace of poc")
