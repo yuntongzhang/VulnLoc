@@ -3,15 +3,15 @@ FROM ubuntu:18.04
 # Dependencies
 RUN apt update --fix-missing
 RUN apt install -y build-essential software-properties-common
-RUN apt install -y git gdb vim unzip wget libssl-dev g++-multilib doxygen transfig imagemagick ghostscript zlib1g-dev valgrind 
+RUN apt install -y git gdb vim unzip wget libssl-dev g++-multilib doxygen transfig imagemagick ghostscript zlib1g-dev valgrind
 
 RUN apt install -y python3-pip python3-dev python-dev
 
 RUN python3 -m pip install pyelftools numpy==1.16.6
 
 # prepare code
+COPY . /opt/fuzzer
 WORKDIR /opt/fuzzer
-COPY . .
 
 # RUN mkdir deps
 RUN git submodule init
@@ -57,14 +57,14 @@ RUN ./build.sh
 # RUN ./build.sh
 
 # (YT: add setup of bugzilla-2633 for testing)
-WORKDIR /opt/fuzzer
+WORKDIR /opt/
 RUN mkdir bugzilla-2633
-WORKDIR /opt/fuzzer/bugzilla-2633
+WORKDIR /opt/bugzilla-2633
 RUN mkdir vulnloc-output
-COPY ./bugzilla_2633.config ./vulnloc-config
+COPY ./bugzilla-2633.config ./vulnloc-config
 RUN wget -O exploit https://github.com/asarubbo/poc/raw/master/00107-libtiff-heapoverflow-PSDataColorContig
 RUN git clone https://github.com/vadz/libtiff.git source
-WORKDIR /opt/fuzzer/bugzilla-2633/source
+WORKDIR /opt/bugzilla-2633/source
 RUN git checkout f3069a5
 RUN ./configure
 RUN make CFLAGS="-static" CXXFLAGS="-static" -j10
