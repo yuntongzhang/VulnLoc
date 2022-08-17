@@ -21,12 +21,12 @@ More details about the project can be found at the [paper](https://www.comp.nus.
 
 VulnLoc requires all the dependencies of Dynamorio, numpy (>=1.16) and pyelftools.
 ```console
-$ sudo apt install -y build-essential git vim unzip python-dev python-pip ipython wget libssl-dev g++-multilib doxygen transfig imagemagick ghostscript git zlib1g-dev  
+$ sudo apt install -y build-essential git vim unzip python-dev python-pip ipython wget libssl-dev g++-multilib doxygen transfig imagemagick ghostscript git zlib1g-dev
 # install numpy
-$ wget https://github.com/numpy/numpy/releases/download/v1.16.6/numpy-1.16.6.zip  
-$ unzip numpy-1.16.6.zip  
-$ cd ./numpy-1.16.6  
-$ python setup.py install  
+$ wget https://github.com/numpy/numpy/releases/download/v1.16.6/numpy-1.16.6.zip
+$ unzip numpy-1.16.6.zip
+$ cd ./numpy-1.16.6
+$ python setup.py install
 $ cd ../
 # install pyelftools
 $ sudo pip install pyelftools
@@ -36,24 +36,24 @@ $ sudo pip install pyelftools
 
 CMake is required for building dynamorio.
 ```console
-$ wget https://github.com/Kitware/CMake/releases/download/v3.16.2/cmake-3.16.2.tar.gz  
-$ tar -xvzf ./cmake-3.16.2.tar.gz  
-$ cd ./cmake-3.16.2  
-$ ./bootstrap  
-$ make  
-$ sudo make install  
-$ cd ../  
+$ wget https://github.com/Kitware/CMake/releases/download/v3.16.2/cmake-3.16.2.tar.gz
+$ tar -xvzf ./cmake-3.16.2.tar.gz
+$ cd ./cmake-3.16.2
+$ ./bootstrap
+$ make
+$ sudo make install
+$ cd ../
 ```
 
 3) Install Dynamorio
 ```console
-$ git clone https://github.com/DynamoRIO/dynamorio.git  
-$ cd ./dynamorio  
-$ mkdir build  
-$ cd ./build  
-$ cmake ../  
+$ git clone https://github.com/DynamoRIO/dynamorio.git
+$ cd ./dynamorio
+$ mkdir build
+$ cd ./build
+$ cmake ../
 $ make
-$ cd ../../  
+$ cd ../../
 ```
 
 4) Install the Dynamorio-based tracer
@@ -64,23 +64,23 @@ $ unzip iftracer.zip  # iftracer.zip can be found in the folder "./code"
 ```
 Users need to replace <path_to_dynamorio> with the path of Dynamorio in the CMakeLists.txt for both iftracer and ifLineTracer. After the modification, please run:
 ```console
-$ cd ./iftracer/iftracer  
-$ cmake CMakeLists.txt  
-$ make  
-$ cd ../ifLineTracer  
-$ cmake CMakeLists.txt  
-$ make  
-$ cd ../../  
+$ cd ./iftracer/iftracer
+$ cmake CMakeLists.txt
+$ make
+$ cd ../ifLineTracer
+$ cmake CMakeLists.txt
+$ make
+$ cd ../../
 ```
 
 5) Configure the path to Dynamorio and the tracer
 
 Please fill in the correct path of Dynamorio and the tracer in **./code/env.py**.
 ```
-dynamorio_path = "<path_to_dynamorio>/build/bin64/drrun"  
-iftracer_path = "<path_to_tracer>/iftracer/libiftracer.so"  
-iflinetracer_path = "<path_to_tracer>/ifLineTracer/libifLineTracer.so"  
-libcbr_path = "<path_to_dynamorio>/build/api/bin/libcbr.so"  
+dynamorio_path = "<path_to_dynamorio>/build/bin64/drrun"
+iftracer_path = "<path_to_tracer>/iftracer/libiftracer.so"
+iflinetracer_path = "<path_to_tracer>/ifLineTracer/libifLineTracer.so"
+libcbr_path = "<path_to_dynamorio>/build/api/bin/libcbr.so"
 ```
 
 ## Usage
@@ -88,8 +88,8 @@ To show the usage of VulnLoc, we take *cve-2016-5314* as an example. Here are th
 - [PoC](http://bugzilla.maptools.org/show_bug.cgi?id=2554)
 - [Developer-generated patch](https://github.com/vadz/libtiff/commit/391e77fcd217e78b2c51342ac3ddb7100ecacdd2)
 
-1) (Optional) Compile the target vulnerable program  
-VulnLoc takes a vulnerable binary and the corresponding PoC as its input. If you do not have the vulnerable binary, please compile the program first.   
+1) (Optional) Compile the target vulnerable program
+VulnLoc takes a vulnerable binary and the corresponding PoC as its input. If you do not have the vulnerable binary, please compile the program first.
 ```console
 $ sudo apt install -y zlib1g-dev
 $ cd cve_2016_5314
@@ -99,9 +99,9 @@ $ ./configure
 $ make CFLAGS="-static -ggdb" CXXFLAGS="-static -ggdb"
 ```
 
-2) Configure the CVE  
+2) Configure the CVE
 To monitor the execution of the given vulnerable binary, users need to provide the configuration file for each CVE. The template of the configuration file can be found in *./code/config.ini* file. To complete the configuration file, users need to fill in the following info/attributes for each CVE:
-- **cve_tag**: The unique ID of each CVE (e.g., cve_2016_5314). A configuration file can include the information for multiple CVE. For extracting the right configuration, users are required to assign a unique ID for each CVE.  
+- **cve_tag**: The unique ID of each CVE (e.g., cve_2016_5314). A configuration file can include the information for multiple CVE. For extracting the right configuration, users are required to assign a unique ID for each CVE.
 - **trace_cmd**: The command used for executing the vulnerable program with the given PoC. Each argument is separate by ';'. The location of the target argument for fuzzing is replaced with '***'.
 - **crash_cmd**: The command used for checking whether the vulnerable program gets exploited or not. crash_cmd follows the same format as trace_cmd.
 - **bin_path**: The path to the vulnerable binary.
@@ -115,7 +115,7 @@ To monitor the execution of the given vulnerable binary, users need to provide t
 
 a) Building ane exploit detector.
 
-We utilize Valgrind to detect whether the program gets exploit or not for cve-2016-5314. Valgrind is not the only choice and users can define their own way for detecting the vulnerability. If the binary is compiled with address sanitizer, users can also use ASAN to detect the vulnerability. 
+We utilize Valgrind to detect whether the program gets exploit or not for cve-2016-5314. Valgrind is not the only choice and users can define their own way for detecting the vulnerability. If the binary is compiled with address sanitizer, users can also use ASAN to detect the vulnerability.
 - Building Valgrind
 ```console
 $ sudo apt-get install -y libc6-dbg
@@ -179,9 +179,9 @@ $ cd ./code
 $ python fuzz.py --config_file <path_to_config_file> --tag <cve_tag>
 ```
 
-4) Rank the location candidates 
+4) Rank the location candidates
 ```console
-$ python patchloc.py --config_file <path_to_config_file> --tag <cve_tag> --func calc --out_folder <path_to_output_folder> --poc_trace_hash <poc_trace_hash> --process_num <process_num> 
+$ python patchloc.py --config <path_to_config_file> --tag <cve_tag> --func calc --out <path_to_output_folder> --poc_trace_hash <poc_trace_hash> --process_num <process_num>
 ```
 
 ## More Examples

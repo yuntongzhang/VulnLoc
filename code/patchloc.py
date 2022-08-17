@@ -194,7 +194,8 @@ def calc_distance(poc_trace, insns):
 
 def bin_to_asm(bin_path):
     cmd_list = ['objdump', '-S', '-l', bin_path]
-    p1 = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p1 = subprocess.Popen(cmd_list, encoding='utf-8', errors='replace',
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, _ = p1.communicate()
     content = out.split('\n')
     return content
@@ -253,13 +254,13 @@ def show(assembly, poc_trace, valid_insns, group_info, l2_norm, normalized_nscor
 
 def parse_args():
     parser = argparse.ArgumentParser(description="PatchLoc")
-    parser.add_argument("--config_file", dest="config_file", type=str, required=True,
+    parser.add_argument("--config", dest="config", type=str, required=True,
                         help="The path of config file")
     parser.add_argument("--tag", dest="tag", type=str, required=True,
                         help="The cve tag")
     parser.add_argument("--func", dest="func", type=str, required=True,
                         help="The function for execution (calc/show)")
-    parser.add_argument("--out_folder", dest="out_folder", type=str, required=True,
+    parser.add_argument("--out", dest="out_folder", type=str, required=True,
                         help="The path of output folder which is named according to the timestamp")
     parser.add_argument("--poc_trace_hash", dest="poc_trace_hash", type=str, required=True,
                         help="The hash of executing trace of poc")
@@ -271,8 +272,9 @@ def parse_args():
                         help="The number of instructions to show")
     args = parser.parse_args()
 
+    out_folder = args.out
     config = configparser.ConfigParser()
-    config.read(args.config_file)
+    config.read(args.config)
     if args.tag not in config.sections():
         raise Exception(f"ERROR: Please provide the configuration file for {args.tag}")
 
@@ -293,7 +295,7 @@ def parse_args():
     else:
         raise Exception("ERROR: Please specify the binary file in config.ini")
 
-    trace_folder = os.path.join(args.out_folder, 'traces')
+    trace_folder = os.path.join(out_folder, 'traces')
     if not os.path.exists(trace_folder):
         raise Exception(f"ERROR: Unknown folder -> {trace_folder}")
     detailed_config['trace_folder'] = trace_folder
@@ -308,16 +310,16 @@ def parse_args():
             detailed_config['load_from_npz'] = True
     detailed_config['poc_trace_path'] = poc_trace_path
 
-    report_file = os.path.join(args.out_folder, 'reports.pkl')
+    report_file = os.path.join(out_folder, 'reports.pkl')
     if not os.path.exists(report_file):
         raise Exception(f"ERROR: Unknown file path -> {report_file}")
     detailed_config['report_file'] = report_file
 
-    npz_path = os.path.join(args.out_folder, 'var_ranking.npz')
+    npz_path = os.path.join(out_folder, 'var_ranking.npz')
     detailed_config['npz_path'] = npz_path
 
     return (args.func, args.target_src_str, detailed_config, args.process_num,
-            args.show_num, args.out_folder)
+            args.show_num, out_folder)
 
 
 def init_log(out_folder):
