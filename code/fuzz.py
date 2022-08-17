@@ -360,6 +360,20 @@ def real_concfuzz_loop(config_info, poc_trace, seed_len):
             break
 
 
+def save_useful_info():
+    report_filepath = os.path.join(values.OutFolder, 'reports.pkl')
+    utils.write_pkl(report_filepath, values.ReportCollection)
+    logging.debug("Finish writing all the reports!")
+
+    seed_filepath = os.path.join(values.OutFolder, 'seeds.pkl')
+    utils.write_pkl(seed_filepath, values.SeedPool)
+    logging.debug("Finish writing all the seeds!")
+
+    seed_hash_filepath = os.path.join(values.OutFolder, 'seed_hashes.pkl')
+    utils.write_pkl(seed_hash_filepath, values.SeedTraceHashList)
+    logging.debug("Finish writing all the hash of seeds!")
+
+
 def concentrate_fuzz(config_info):
     # (YN: added some info output)
     logging.info(f"Input format: {config_info['input_format']}")
@@ -380,20 +394,8 @@ def concentrate_fuzz(config_info):
     real_concfuzz_loop(config_info, trace, seed_len)
 
     # (YN: skipped to save time due not needed)
-    # save all the remaining info
-    #report_filepath = os.path.join(OutFolder, 'reports.pkl')
-    #utils.write_pkl(report_filepath, ReportCollection)
-    #logging.debug("Finish writing all the reports!")
+    save_useful_info()
 
-    # (YN: skipped to save time due not needed)
-    #seed_filepath = os.path.join(OutFolder, 'seeds.pkl')
-    #utils.write_pkl(seed_filepath, SeedPool)
-    #logging.debug("Finish writing all the seeds!")
-
-    # (YN: skipped to save time due not needed)
-    #seed_hash_filepath = os.path.join(OutFolder, 'seed_hashes.pkl')
-    #utils.write_pkl(seed_hash_filepath, SeedTraceHashList)
-    #logging.debug("Finish writing all the hash of seeds!")
     logging.debug('Done!')
 
 
