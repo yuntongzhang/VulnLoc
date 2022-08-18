@@ -26,6 +26,8 @@ def D(msg):
 def init_fuzz_log(config_info):
     global logger
     fuzz_logger = logging.getLogger('Fuzz')
+    fuzz_logger.setLevel(logging.DEBUG)
+
     console_handler = create_console_handler()
     file_handler = logging.FileHandler(os.path.join(values.OutFolder, 'fuzz.log'))
     if values.Verbose:
@@ -47,6 +49,8 @@ def init_fuzz_log(config_info):
 def init_patchloc_log():
     global logger
     loc_logger = logging.getLogger('PatchLoc')
+    loc_logger.setLevel(logging.DEBUG)
+
     console_handler = create_console_handler()
     file_handler = logging.FileHandler(os.path.join(values.OutFolder, 'patchloc.log'))
     file_handler.setLevel(logging.DEBUG)
