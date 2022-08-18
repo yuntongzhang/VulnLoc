@@ -13,7 +13,7 @@ def rewrite_trace_binary(bin_path):
     trace_bin_path = bin_path + ".trace"
     curr_dir = os.getcwd()
     os.chdir(values.e9patch_dir)
-    patch_cmd = ['./e9tool', '-M', 'condjump', '-P', 'entry(addr)@printaddr',
+    patch_cmd = ['./e9tool', '-M', 'condjump', '-P', 'entry((static)addr)@printaddr',
                  '-o', trace_bin_path, bin_path]
     p = subprocess.Popen(patch_cmd)
     p.communicate()
