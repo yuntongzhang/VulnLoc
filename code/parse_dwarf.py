@@ -1,12 +1,12 @@
 import subprocess
 import operator
 import string
-import logging
 import os
 
 from elftools.elf.elffile import ELFFile
 
 import utils
+from logger import logger
 
 
 def find_end_curly_bracket(file_path, start_line, end_line):
@@ -125,7 +125,7 @@ class DwarfParser():
         with open(bin_path, 'rb') as f:
             elffile = ELFFile(f)
             self.dwarfinfo = elffile.get_dwarf_info()
-        logging.debug(f"Read dwarf info from file -> {bin_path}")
+        logger.debug(f"Read dwarf info from file -> {bin_path}")
         self.bin_path = bin_path
 
     def bin2func(self, target_addr):
@@ -136,7 +136,7 @@ class DwarfParser():
                 cu_min_addr = top_die.attributes['DW_AT_low_pc'].value
                 cu_max_addr = cu_min_addr + top_die.attributes['DW_AT_high_pc'].value
             except:
-                logging.debug(f"Warning: Cannot find the DW_AT_low_pc & DW_AT_high_pc attributes!"
+                logger.debug(f"Warning: Cannot find the DW_AT_low_pc & DW_AT_high_pc attributes!"
                     f"\n{top_die.__str__()}")
             else:
                 if target_addr >= cu_min_addr and target_addr < cu_max_addr:
@@ -153,7 +153,7 @@ class DwarfParser():
                     die_min_addr = die.attributes['DW_AT_low_pc'].value
                     die_max_addr = die_min_addr + die.attributes['DW_AT_high_pc'].value
                 except:
-                    logging.debug(f"Warning: Cannot find the DW_AT_low_pc & "
+                    logger.debug(f"Warning: Cannot find the DW_AT_low_pc & "
                         f"DW_AT_high_pc attributes!\n{die.__str__()}")
                 else:
                     if target_die is not None:
@@ -169,15 +169,15 @@ class DwarfParser():
         file_path = os.path.join(file_dir, file_name)
         func_name = target_die.attributes['DW_AT_name'].value
         func_decl_line = target_die.attributes['DW_AT_decl_line'].value
-        logging.info(f"The address <{target_addr}> can be found below:\nfile: {file_path}\n"
+        logger.info(f"The address <{target_addr}> can be found below:\nfile: {file_path}\n"
             f"func name: {func_name}\nfunc decl line: {func_decl_line}")
         if next_die is None:
             raise Exception(f"ERROR: Cannot find the next function after function <{func_name}>")
         next_func_decl_line = next_die.attributes['DW_AT_decl_line'].value
-        logging.info(f'The starting line of function after <{func_name}>: {next_func_decl_line}')
+        logger.info(f'The starting line of function after <{func_name}>: {next_func_decl_line}')
         last_curly_bracket_line = find_end_curly_bracket(
             file_path, func_decl_line, next_func_decl_line)
-        logging.info(f'The ending line of function <{func_name}>: {last_curly_bracket_line}')
+        logger.info(f'The ending line of function <{func_name}>: {last_curly_bracket_line}')
 
         return file_path, func_name, func_decl_line, last_curly_bracket_line, target_die
 
@@ -211,12 +211,12 @@ class DwarfParser():
                     main_line = line
         if main_tag != 1:
             raise Exception(f"ERROR: There are {main_tag} main functions.")
-        logging.info(f"Here is the main function in the source -> {src_filepath}: {main_line}")
+        logger.info(f"Here is the main function in the source -> {src_filepath}: {main_line}")
 
         flineNumberDict = {}
         main_addr, fileBoundRangesList, fileBoundIndexList = readELF(
             self.bin_path, flineNumberDict, main_line, src_filepath)
-        logging.info(f"Here is the main address in binary -> {main_addr}")
+        logger.info(f"Here is the main address in binary -> {main_addr}")
         return flineNumberDict, fileBoundRangesList, fileBoundIndexList, src_filepath
 
     def get_all_dies(self):

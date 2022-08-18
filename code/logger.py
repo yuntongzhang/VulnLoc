@@ -4,34 +4,54 @@ import logging
 import values
 
 
-def init_fuzz_log(config_info):
-    log_path = os.path.join(values.OutFolder, 'fuzz.log')
-    if values.Verbose:
-        logging.basicConfig(filename=log_path, filemode='a+', level=logging.DEBUG,
-                            format="[%(asctime)s-%(funcName)s-%(levelname)s]: %(message)s",
-                            datefmt="%d-%b-%y %H:%M:%S")
+logger = None # should call init first
+log_format = "[%(asctime)s-%(funcName)s-%(levelname)s]: %(message)s"
+log_date_format = "%d-%b-%y %H:%M:%S"
 
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    console_fmt = logging.Formatter(
-        fmt="[%(asctime)s-%(funcName)s-%(levelname)s]: %(message)s", datefmt="%d-%b-%y %H:%M:%S")
-    console.setFormatter(console_fmt)
-    logging.getLogger().addHandler(console)
-    logging.info(f'Output Folder: {values.OutFolder}')
-    logging.debug(f"CVE: {values.Tag}")
+
+def init_fuzz_log(config_info):
+    global logger
+    fuzz_logger = logging.getLogger('Fuzz')
+    console_handler = create_console_handler()
+    file_handler = logging.FileHandler(os.path.join(values.OutFolder, 'fuzz.log'))
+    if values.Verbose:
+        file_handler.setLevel(logging.DEBUG)
+    else:
+        file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(create_standard_formatter())
+
+    fuzz_logger.addHandler(console_handler)
+    fuzz_logger.addHandler(file_handler)
+    logger = fuzz_logger
+
+    logger.info(f'Output Folder: {values.OutFolder}')
+    logger.debug(f"CVE: {values.Tag}")
     config_str = '\n'.join([f"\t{key} : {val}" for key, val in config_info.items()])
-    logging.debug(f"Config Info: \n{config_str}")
+    logger.debug(f"Config Info: \n{config_str}")
 
 
 def init_patchloc_log():
-    log_path = os.path.join(values.OutFolder, 'patchloc.log')
-    logging.basicConfig(filename=log_path, filemode='a+', level=logging.DEBUG,
-                        format="[%(asctime)s-%(funcName)s-%(levelname)s]: %(message)s",
-                        datefmt="%d-%b-%y %H:%M:%S")
+    global logger
+    loc_logger = logging.getLogger('PatchLoc')
+    console_handler = create_console_handler()
+    file_handler = logging.FileHandler(os.path.join(values.OutFolder, 'patchloc.log'))
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(create_standard_formatter())
+
+    loc_logger.addHandler(console_handler)
+    loc_logger.addHandler(file_handler)
+    logger = loc_logger
+
+    logger.info(f"Output Folder: {values.OutFolder}")
+
+
+def create_console_handler():
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
-    console_fmt = logging.Formatter(fmt="[%(asctime)s-%(funcName)s-%(levelname)s]: %(message)s",
-                                    datefmt="%d-%b-%y %H:%M:%S")
+    console_fmt = create_standard_formatter()
     console.setFormatter(console_fmt)
-    logging.getLogger().addHandler(console)
-    logging.info(f"Output Folder: {values.OutFolder}")
+    return console
+
+
+def create_standard_formatter():
+    return logging.Formatter(fmt=log_format, datefmt=log_date_format)

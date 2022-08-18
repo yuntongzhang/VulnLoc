@@ -3,7 +3,6 @@ Contains things related to running one run with binary and some arguments.
 """
 
 import os
-import logging
 import json
 from copy import deepcopy
 import numpy as np
@@ -12,6 +11,7 @@ import utils
 import values
 import tracer
 import oracle
+from logger import logger
 
 
 def prepare_args(input_no, poc, poc_fmt):
@@ -43,7 +43,7 @@ def prepare_args(input_no, poc, poc_fmt):
 
     # (YN: added to store "all" input files)
     if values.StoreAllInputs:
-        logging.info(f"write input: {input_filepath}")
+        logger.info(f"write input: {input_filepath}")
         if arg_num == 1 and poc_fmt[0][0] == 'bfile':
             utils.write_bin(input_filepath, content)
         else:  # == 'text'

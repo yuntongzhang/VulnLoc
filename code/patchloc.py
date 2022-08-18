@@ -1,13 +1,12 @@
 import os
 import string
-import logging
 import subprocess
 from multiprocessing import Pool
 import numpy as np
 
 import utils
 import values
-from logger import init_patchloc_log
+from logger import logger, init_patchloc_log
 
 
 def process_poc_trace():
@@ -78,7 +77,7 @@ def normalize_score(score):
     max_value = np.max(score)
     min_value = np.min(score)
     if max_value == min_value:
-        logging.info('max_value == min_value in normalization')
+        logger.info('max_value == min_value in normalization')
         return score
     else:
         normalized_score = (score - min_value) / (max_value - min_value)
@@ -138,7 +137,7 @@ def calc_scores(valid_insns, tc_num_dict, t_num_dict, malicious_num, output_path
 def count_all(valid_insns, report_dict, trace_dict, output_path):
     malicious_num = len(report_dict['m'])
     benign_num = len(report_dict['b'])
-    logging.info(f"#reports: {malicious_num + benign_num} "
+    logger.info(f"#reports: {malicious_num + benign_num} "
         f"(#malicious: {malicious_num}; #benign: {benign_num})")
     # initialize all the count info
     tc_num_dict = init_count_dict(valid_insns)
@@ -180,7 +179,7 @@ def insn_to_src(assembly, insn):
             target_line_no = line_no
             break
     if target_line_no < 0:
-        logging.info(f"ERROR: Cannot find the instruction -> {insn}")
+        logger.debug(f"ERROR: Cannot find the instruction -> {insn}")
         return unknown_str
     while target_line_no >= 0:
         line = assembly[target_line_no]
@@ -195,7 +194,7 @@ def insn_to_src(assembly, insn):
             if os.path.exists(tmp2[0]) and tag:
                 return tmp[0].split('/')[-1]
         target_line_no = target_line_no - 1
-    logging.info(f"Cannot find the source code for instruction -> {insn}")
+    logger.debug(f"Cannot find the source code for instruction -> {insn}")
     return unknown_str
 
 
@@ -223,7 +222,7 @@ def show(assembly, poc_trace, valid_insns, group_info, l2_norm, normalized_nscor
         sorted_insn_id_list = insn_id_list[sorted_idx_list]
 
         for insn_id in sorted_insn_id_list:
-            logging.info(f"[INSN-{show_no}] {valid_insns[insn_id]} ->"
+            logger.info(f"[INSN-{show_no}] {valid_insns[insn_id]} ->"
                 f"{insn_to_src(assembly, valid_insns[insn_id])} "
                 f"(l2norm: {l2_norm[insn_id]}; normalized(N): {normalized_nscore[insn_id]};"
                 f"normalized(S): {normalized_sscore[insn_id]})")

@@ -1,4 +1,3 @@
-import logging
 import os
 import shutil
 import json
@@ -11,7 +10,7 @@ import runner
 import tracer
 import oracle
 import values
-from logger import init_fuzz_log
+from logger import logger, init_fuzz_log
 from sensitivity_map import SensMap
 
 
@@ -77,7 +76,7 @@ def mutate_inputs(seed, poc_fmt, mutation_num, mutate_idx):
 # (YN: added function to store generated inputs)
 def store_input(output_folder, input_counter, config_info, content):
     input_filepath = os.path.join(output_folder, "input_" + str(input_counter))
-    logging.info(f"write input: {input_filepath}")
+    logger.info(f"write input: {input_filepath}")
     if config_info['input_format'] == 'bfile':
         utils.write_bin(input_filepath, content)
     else:  # == 'text'
@@ -90,7 +89,7 @@ def process_poc(config_info):
     # generate the trace for the poc
     trace, trace_hash = runner.just_trace(0, config_info['poc'], config_info['poc_fmt'],
             config_info['trace_cmd'], config_info['trace_replace_idx'], config_info['bin_path'])
-    logging.debug(f'PoC Hash: {trace_hash}')
+    logger.debug(f'PoC Hash: {trace_hash}')
     seed_len = len(config_info['poc'])
     # save the trace
     values.TraceHashCollection.append(trace_hash)
@@ -103,7 +102,7 @@ def process_poc(config_info):
     # add into seed pool
     values.SeedPool.append([False, config_info['poc']])
     values.SeedTraceHashList.append(trace_hash)
-    logging.info('Finish processing the poc!')
+    logger.info('Finish processing the poc!')
     return trace, seed_len
 
 
@@ -115,13 +114,13 @@ def real_concfuzz_loop(config_info, poc_trace, seed_len):
         # choose seed & load seed_trace
         selection_result = choose_seed()
         if selection_result is None:
-            logging.debug(f"[R-{round_no}] Finish processing all the seeds!")
+            logger.debug(f"[R-{round_no}] Finish processing all the seeds!")
             break
         selected_seed_trace_hash, selected_seed = selection_result
-        logging.debug(f"[R-{round_no}] Select seed -> {selected_seed_trace_hash}")
+        logger.debug(f"[R-{round_no}] Select seed -> {selected_seed_trace_hash}")
         seed_pool_str = '\n'.join([f'{values.SeedTraceHashList[id]}: {values.SeedPool[id][0]}'
                                    for id in range(len(values.SeedPool))])
-        logging.debug(f"The status of current seed pool:\n{seed_pool_str}")
+        logger.debug(f"The status of current seed pool:\n{seed_pool_str}")
 
         trace_path = os.path.join(values.TraceFolder, selected_seed_trace_hash + '.npz')
         if round_no == 1:
@@ -129,7 +128,7 @@ def real_concfuzz_loop(config_info, poc_trace, seed_len):
         else:
             selected_seed_trace = np.load(trace_path)
             # selected_seed_trace = utils.read_pkl(trace_path)
-        logging.info(f'len(Seed Trace): {len(selected_seed_trace)}')
+        logger.info(f'len(Seed Trace): {len(selected_seed_trace)}')
 
         # initialize sensitivity map
         sens_map = SensMap(seed_len, len(selected_seed_trace), config_info['#combination'])
@@ -143,13 +142,13 @@ def real_concfuzz_loop(config_info, poc_trace, seed_len):
             if mutate_idx is None:  # exit if all the bytes get mutated
                 break
             actual_mutate_loc = sens_map.retrieve_mutate_idx(mutate_idx)
-            logging.debug(f"[R-{round_no}-{subround_no}] Select the mutate idx ->"
+            logger.debug(f"[R-{round_no}-{subround_no}] Select the mutate idx ->"
 			 	f"{mutate_idx}: {actual_mutate_loc}")
             sens_map.mark_mutate_idx(mutate_idx)
             # mutate inputs
             inputs = mutate_inputs(selected_seed, config_info['poc_fmt'],
 								   config_info['#mutation'], actual_mutate_loc)
-            logging.debug(f"Shape(mutated_inputs): {inputs.shape}")
+            logger.debug(f"Shape(mutated_inputs): {inputs.shape}")
             # execute all the mutated inputs
             # each element is in the fmt of [id, trace, trace_hash, crash_result, trace_diff_id]
             result_collection = []
@@ -166,7 +165,7 @@ def real_concfuzz_loop(config_info, poc_trace, seed_len):
                 )
             pool.close()
             pool.join()
-            logging.debug(f"#(Missed): {input_num - len(result_collection)}")
+            logger.debug(f"#(Missed): {input_num - len(result_collection)}")
             # Delete all the tmp files
             shutil.rmtree(values.TmpFolder)
             os.mkdir(values.TmpFolder)
@@ -204,7 +203,7 @@ def real_concfuzz_loop(config_info, poc_trace, seed_len):
                 if [trace_hash, crash_result] not in values.ReportCollection:
                     values.ReportCollection.append([trace_hash, crash_result])
 
-            logging.debug(f"#Diff: {len(diff_collection)}; #ExeResult: {len(crash_collection)};"
+            logger.debug(f"#Diff: {len(diff_collection)}; #ExeResult: {len(crash_collection)};"
 				f"#seed: {len(values.SeedPool)}")
 
             # update sensitivity map
@@ -213,16 +212,16 @@ def real_concfuzz_loop(config_info, poc_trace, seed_len):
             ctime = time()
             duration = ctime - stime
             if duration >= config_info['local_timeout']:  # exit if timeouts
-                logging.debug(f"[R-{round_no}-{subround_no}] Timeout locally!"
+                logger.debug(f"[R-{round_no}-{subround_no}] Timeout locally!"
 					f"-> Duration: {duration} ({ctime} - {stime}) in seconds")
                 break
             # check whether all the locations get explored or not.
             unexplore_loc_idx_list = np.where(np.asarray(
                 [len(item) for item in sens_map.loc_map()['value']]) == 0)[0]
-            logging.debug(
+            logger.debug(
                 f"[R-{round_no}-{subround_no}] #(Unexplored Locs): {len(unexplore_loc_idx_list)}")
             if len(unexplore_loc_idx_list) == 0:
-                logging.debug(f"[R-{round_no}-{subround_no}] Finish exploring all the locs!")
+                logger.debug(f"[R-{round_no}-{subround_no}] Finish exploring all the locs!")
                 break
 
         # (YN: skipped processing and saving of sensitivity map to save time)
@@ -232,7 +231,7 @@ def real_concfuzz_loop(config_info, poc_trace, seed_len):
         ctime = time()
         duration = ctime - stime
         if duration >= config_info['global_timeout']:
-            logging.debug(f"[R-{round_no}] Timeout!"
+            logger.debug(f"[R-{round_no}] Timeout!"
 				f"-> Duration: {duration} ({ctime} - {stime}) in seconds")
             break
 
@@ -240,27 +239,27 @@ def real_concfuzz_loop(config_info, poc_trace, seed_len):
 def save_useful_info():
     values.SavedReportPath = os.path.join(values.OutFolder, 'reports.pkl')
     utils.write_pkl(values.SavedReportPath, values.ReportCollection)
-    logging.debug("Finish writing all the reports!")
+    logger.debug("Finish writing all the reports!")
 
     values.SavedSeedsPath = os.path.join(values.OutFolder, 'seeds.pkl')
     utils.write_pkl(values.SavedSeedsPath, values.SeedPool)
-    logging.debug("Finish writing all the seeds!")
+    logger.debug("Finish writing all the seeds!")
 
     values.SavedSeedHashesPath = os.path.join(values.OutFolder, 'seed_hashes.pkl')
     utils.write_pkl(values.SavedSeedHashesPath, values.SeedTraceHashList)
-    logging.debug("Finish writing all the hash of seeds!")
+    logger.debug("Finish writing all the hash of seeds!")
 
 
 def concentrate_fuzz(config_info):
     # (YN: added some info output)
-    logging.info(f"Input format: {config_info['input_format']}")
-    logging.info(f"Store all input files: {config_info['store_all_inputs']}")
+    logger.info(f"Input format: {config_info['input_format']}")
+    logger.info(f"Store all input files: {config_info['store_all_inputs']}")
 
     values.StoreAllInputs = config_info['store_all_inputs']
 
     # init the randomization function
     np.random.seed(config_info['rand_seed'])
-    logging.info(f"Initialized the random seed -> {config_info['rand_seed']}")
+    logger.info(f"Initialized the random seed -> {config_info['rand_seed']}")
 
     # prepare different binaries
     tracer.rewrite_trace_binary(config_info['bin_path'])
@@ -273,7 +272,7 @@ def concentrate_fuzz(config_info):
     # (YN: skipped to save time due not needed)
     save_useful_info()
 
-    logging.debug('Done!')
+    logger.debug('Done!')
 
 
 def run(parsed_config):

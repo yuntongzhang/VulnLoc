@@ -1,10 +1,10 @@
 import itertools
-import logging
 import os
 import numpy as np
 
 import values
 import utils
+from logger import logger
 
 
 class SensMap(object):
@@ -19,10 +19,10 @@ class SensMap(object):
             else:
                 idx_list += tmp
 
-        logging.debug(f"Max Combinations: {max_combination}")
-        logging.debug(f"Number of Mutation Idxes: {len(idx_list)}")
-        logging.debug(f"#Loc: {seed_trace_len}")
-        logging.debug(f"Size(seed): {seed_len}")
+        logger.debug(f"Max Combinations: {max_combination}")
+        logger.debug(f"Number of Mutation Idxes: {len(idx_list)}")
+        logger.debug(f"#Loc: {seed_trace_len}")
+        logger.debug(f"Size(seed): {seed_len}")
 
         self.crash_sens_map = {
             'idx': idx_list,
@@ -44,13 +44,13 @@ class SensMap(object):
         loc_num = len(self.loc_sens_map['value'])
         for diff_id in diff_collection:
             if diff_id < loc_num:
-                logging.debug(
+                logger.debug(
                     f"Update location sensitivity map! loc: {diff_id}; mutate id: {mutate_idx}")
                 self.loc_sens_map['value'][diff_id].append(mutate_idx)
 
     def update_crash_map(self, mutate_idx, crash_collection):
         if len(crash_collection) == 2:
-            logging.debug(f"Update crash location sensitivity map! mutate id: {mutate_idx}")
+            logger.debug(f"Update crash location sensitivity map! mutate id: {mutate_idx}")
             self.crash_sens_map['value'][mutate_idx] = 1
 
     def select_mutate_idx(self):
@@ -59,21 +59,21 @@ class SensMap(object):
         # find out which loc has not been explored
         unexplore_list = np.where(np.asarray([len(item)
                                   for item in self.loc_sens_map['value']]) == 0)[0]
-        logging.debug(f"#(unexplored loc): {len(unexplore_list)}")
+        logger.debug(f"#(unexplored loc): {len(unexplore_list)}")
         if len(unexplore_list) == 0:
             return None
         unexplore_loc_id = np.min(unexplore_list)
-        logging.debug(f"Unexplored Loc ID: {unexplore_loc_id}")
+        logger.debug(f"Unexplored Loc ID: {unexplore_loc_id}")
 
         tmp = []
         for item in self.loc_sens_map['value'][:unexplore_loc_id]:
             tmp += item
         fixed_idx = np.asarray(list(set(tmp)))
-        logging.debug(f"Fixed IDs: {fixed_idx}")
+        logger.debug(f"Fixed IDs: {fixed_idx}")
 
         # find out the bytes that can be mutated
         non_mutated_idx = np.asarray(list(set(non_mutated_idx) - set(fixed_idx)))
-        logging.debug(f"#(potential idxes): {len(non_mutated_idx)}")
+        logger.debug(f"#(potential idxes): {len(non_mutated_idx)}")
 
         # randomly select one idx from non_mutated_idx
         min_idx = 0
@@ -84,7 +84,7 @@ class SensMap(object):
                 non_mutated_idx >= min_idx, non_mutated_idx < max_idx))[0]])
             min_idx = max_idx
             if len(idx_range) > 0:
-                logging.debug(f"Select the mutation idx from {comb_id}-combination")
+                logger.debug(f"Select the mutation idx from {comb_id}-combination")
                 np.random.shuffle(idx_range)
                 return idx_range[0]
         return None
@@ -121,7 +121,7 @@ class SensMap(object):
 
         # save the sensitivity map
         sensitivity_filepath = os.path.join(values.OutFolder, f'sensitivity_{seed_trace_hash}.pkl')
-        logging.debug("Start saving the sensitivity map -> {sensitivity_filepath}")
+        logger.debug("Start saving the sensitivity map -> {sensitivity_filepath}")
         info = {
             'idx': self.loc_sens_map['idx'],
             'loc_idx': loc_idxes,
@@ -130,4 +130,4 @@ class SensMap(object):
             'loc_tag': list(self.loc_sens_map['tag'])
         }
         utils.write_pkl(sensitivity_filepath, info)
-        logging.debug(f"Finish writing the sensitivity map -> {sensitivity_filepath}")
+        logger.debug(f"Finish writing the sensitivity map -> {sensitivity_filepath}")
