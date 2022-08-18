@@ -3,8 +3,10 @@ import string
 import multiprocessing
 import numpy as np
 
+import values
+
 # system setup
-ProcessNum = np.min((10, multiprocessing.cpu_count()))
+ActualProcessNum = np.min((values.ProcessNum, multiprocessing.cpu_count()))
 
 # Used for generating the random filename
 FileNameChars = list(string.ascii_letters + string.digits)
