@@ -11,7 +11,7 @@ import utils
 import values
 import tracer
 import oracle
-from logger import logger
+import logger
 
 
 def prepare_args(input_no, poc, poc_fmt):
@@ -43,7 +43,7 @@ def prepare_args(input_no, poc, poc_fmt):
 
     # (YN: added to store "all" input files)
     if values.StoreAllInputs:
-        logger.info(f"write input: {input_filepath}")
+        logger.I(f"write input: {input_filepath}")
         if arg_num == 1 and poc_fmt[0][0] == 'bfile':
             utils.write_bin(input_filepath, content)
         else:  # == 'text'

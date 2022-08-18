@@ -9,6 +9,20 @@ log_format = "[%(asctime)s-%(funcName)s-%(levelname)s]: %(message)s"
 log_date_format = "%d-%b-%y %H:%M:%S"
 
 
+def I(msg):
+    """
+    Info entry.
+    """
+    logger.info(msg)
+
+
+def D(msg):
+    """
+    Debug entry.
+    """
+    logger.debug(msg)
+
+
 def init_fuzz_log(config_info):
     global logger
     fuzz_logger = logging.getLogger('Fuzz')
