@@ -170,6 +170,7 @@ def bin_to_asm(bin_path):
 
 
 def insn_to_src(assembly, insn):
+    unknown_str = "UNKNOWN"
     line_num = len(assembly)
     target_insn = insn[-6:] + ':'
     target_line_no = -1
@@ -179,7 +180,8 @@ def insn_to_src(assembly, insn):
             target_line_no = line_no
             break
     if target_line_no < 0:
-        raise Exception(f"ERROR: Cannot find the instruction -> {insn}")
+        logging.info(f"ERROR: Cannot find the instruction -> {insn}")
+        return unknown_str
     while target_line_no >= 0:
         line = assembly[target_line_no]
         tmp = line.split()
@@ -194,7 +196,7 @@ def insn_to_src(assembly, insn):
                 return tmp[0].split('/')[-1]
         target_line_no = target_line_no - 1
     logging.info(f"Cannot find the source code for instruction -> {insn}")
-    return "UNKNOWN"
+    return unknown_str
 
 
 def rank():
