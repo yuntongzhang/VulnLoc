@@ -5,12 +5,15 @@ import numpy as np
 
 import values
 
-# system setup
-ActualProcessNum = np.min((values.ProcessNum, multiprocessing.cpu_count()))
 
 # Used for generating the random filename
 FileNameChars = list(string.ascii_letters + string.digits)
 FileNameLen = 30
+
+
+def get_process_num():
+    return np.min((values.ProcessNum, multiprocessing.cpu_count()))
+
 
 # Process the binary file
 def read_bin(path):

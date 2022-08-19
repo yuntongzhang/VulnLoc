@@ -40,7 +40,7 @@ def read_all_reports():
     file_list = os.listdir(values.TraceFolder)
     file_num = len(file_list)
     trace_collection = []
-    pool = Pool(utils.ActualProcessNum)
+    pool = Pool(utils.get_process_num())
     for file_no in range(file_num):
         pool.apply_async(
             read_single_trace,

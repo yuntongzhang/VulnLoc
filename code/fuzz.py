@@ -153,7 +153,7 @@ def real_concfuzz_loop(config_info, poc_trace, seed_len):
             # each element is in the fmt of [id, trace, trace_hash, crash_result, trace_diff_id]
             result_collection = []
             input_num = len(inputs)
-            pool = Pool(utils.ActualProcessNum)
+            pool = Pool(utils.get_process_num())
             for input_no in range(input_num):
                 pool.apply_async(
                     runner.gen_report,
