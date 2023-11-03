@@ -86,7 +86,9 @@ def store_input(output_folder, input_counter, config_info, content):
 
 
 def process_poc(config_info):
-    # generate the trace for the poc
+    """
+    Generate trace for the poc input.
+    """
     trace, trace_hash = runner.just_trace(0, config_info['poc'], config_info['poc_fmt'],
             config_info['trace_cmd'], config_info['trace_replace_idx'], config_info['bin_path'])
     logger.D(f'PoC Hash: {trace_hash}')
