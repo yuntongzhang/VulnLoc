@@ -1,5 +1,16 @@
 # VulnLoc
 
+## How to run the new version of VulnLoc
+
+The new image (which is auto-built after pushing to Github), is at `yuntongzhang/vulnloc:github`.
+
+To run on one example, create a container with this image, and do:
+
+```
+cd /opt/fuzzer/code
+python3 main.py --config /opt/cve_2016_5314/vulnloc-config --tag cve_2016_5314 --timeout 240
+```
+
 ## Overview
 
 
