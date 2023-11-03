@@ -1,0 +1,2 @@
+Experimenting on how to condense a trace to a smaller one.
+The condensation identifies repetitions due to loop, and only keep one copy per repetition.
